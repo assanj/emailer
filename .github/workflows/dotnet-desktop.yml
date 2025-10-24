@@ -27,23 +27,24 @@ jobs:
     - name: Publish
       run: dotnet publish "Emailer.vbproj" --configuration Release --runtime win-x64 --output publish --self-contained true /nowarn:CA1416
 
-    - name: List published files
-      run: dir publish
+    - name: Verify EXE files exist
+      run: |
+        echo "=== Checking publish folder ==="
+        dir publish
+        echo "=== EXE file details ==="
+        dir publish\Emailer.exe
 
     - name: Create GitHub Release with EXE
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: build-${{ github.run_number }}
-        name: "Build ${{ github.run_number }}"
+        tag_name: v${{ github.run_number }}
+        name: "Version ${{ github.run_number }}"
         files: |
           publish/Emailer.exe
-          publish/Emailer.dll
-          publish/Emailer.runtimeconfig.json
+          publish/*.dll
+          publish/*.json
         generate_release_notes: true
         draft: false
         prerelease: true
-        body: |
-          Автоматически собранная версия
-          Коммит: ${{ github.sha }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
