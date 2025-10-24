@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{7B06A63E-9E84-4E68-8AC8-44C47EA7A4C5}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>Emailer</RootNamespace>
-    <AssemblyName>Emailer</AssemblyName>
+    <RootNamespace>emailer</RootNamespace>
+    <AssemblyName>emailer</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <MyType>Console</MyType>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
