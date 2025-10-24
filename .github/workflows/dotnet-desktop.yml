@@ -48,14 +48,18 @@ jobs:
         name: emailer-windows
         path: release-files
 
-    - name: Create GitHub Release with EXE
+    - name: Create Tag and Release
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          release-files/emailer.exe
-          release-files/*
+        tag_name: build-${{ github.run_id }}-${{ github.run_number }}
+        name: "Auto Release Build ${{ github.run_number }}"
+        files: release-files/**/*
         generate_release_notes: true
         draft: false
-        prerelease: false
+        prerelease: true
+        body: |
+          Автоматически собранная версия от ${{ github.event.head_commit.timestamp }}
+          
+          Коммит: ${{ github.sha }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
