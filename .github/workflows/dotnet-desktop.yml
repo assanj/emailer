@@ -20,24 +20,18 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    - name: List project files
-      shell: bash
-      run: |
-        echo "=== Project Files ==="
-        find . -name "*.vbproj" -o -name "*.csproj" -o -name "*.sln" | sort
-
     - name: Restore dependencies
       run: dotnet restore "emailer.vbproj"
 
-    - name: Build without warnings
+    - name: Build
       run: dotnet build "emailer.vbproj" --configuration Release --no-restore /nowarn:CA1416
 
-    - name: Publish without warnings
+    - name: Publish
       run: dotnet publish "emailer.vbproj" --configuration Release --runtime win-x64 --output publish/win-x64 --self-contained true /nowarn:CA1416
 
     - name: List published files
-      shell: bash
-      run: ls -la publish/win-x64/
+      shell: cmd
+      run: dir publish\win-x64
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
@@ -58,10 +52,13 @@ jobs:
         name: emailer-win-x64
         path: artifacts
 
+    - name: Display artifacts
+      run: dir artifacts /s
+
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        files: artifacts/**
+        files: artifacts/**/*
         draft: false
         prerelease: false
       env:
