@@ -24,42 +24,14 @@ jobs:
       run: dotnet restore "emailer.vbproj"
 
     - name: Build
-      run: dotnet build "emailer.vbproj" --configuration Release --no-restore /nowarn:CA1416
+      run: dotnet build "emailer.vbproj" --configuration Release --no-restore
 
     - name: Publish
-      run: dotnet publish "emailer.vbproj" --configuration Release --runtime win-x64 --output publish/win-x64 --self-contained true /nowarn:CA1416
+      run: dotnet publish "emailer.vbproj" --configuration Release --runtime win-x64 --output publish --self-contained true
 
-    - name: List published files
-      shell: cmd
-      run: dir publish\win-x64
-
-    - name: Upload artifact
+    - name: Upload EXE artifact
       uses: actions/upload-artifact@v4
       with:
-        name: emailer-win-x64
-        path: publish/win-x64/
-        retention-days: 7
-
-  release:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: windows-latest
-    
-    steps:
-    - name: Download artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: emailer-win-x64
-        path: artifacts
-
-    - name: Display artifacts
-      run: dir artifacts /s
-
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        files: artifacts/**/*
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        name: emailer-windows
+        path: publish/
+        retention-days: 30
