@@ -1,17 +1,13 @@
-name: Build & Release Emailer
+name: Build Windows Release
 
 on:
   push:
-    tags: [ "v*" ]            # запускаем только на тегах v1.2.3 etc
+    tags: [ "v*" ]
   workflow_dispatch:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        runtime: [win-x64, linux-x64, osx-x64]
-
-    runs-on: ${{ matrix.runtime == 'win-x64' && 'windows-latest' || matrix.runtime == 'linux-x64' && 'ubuntu-latest' || 'macos-latest' }}
+    runs-on: windows-latest
 
     steps:
     - name: Checkout
@@ -22,71 +18,45 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    - name: Cache NuGet
-      uses: actions/cache@v4
-      with:
-        path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.vbproj') }}
+    - name: Restore & Build
+      run: |
+        dotnet restore emailer.vbproj
+        dotnet build emailer.vbproj -c Release --no-restore
 
-    - name: Restore
-      run: dotnet restore emailer.vbproj
-
-    - name: Build
-      run: dotnet build emailer.vbproj -c Release --no-restore
-
-    - name: Publish (self-contained, single-file)
+    - name: Publish (single-file, self-contained)
       run: >
         dotnet publish emailer.vbproj
         -c Release
-        -r ${{ matrix.runtime }}
+        -r win-x64
         -p:PublishSingleFile=true
         -p:SelfContained=true
         -p:IncludeNativeLibrariesForSelfExtract=true
-        -o publish/${{ matrix.runtime }}
+        -o publish
 
-    - name: Create default config & ini if missing
+    - name: Create default config & ini
       run: |
-        [ ! -f emailer.config ] && echo "Secret=yoursecret" > emailer.config
-        [ ! -f emailer.ini ]   && echo "Subject_demo"    > emailer.ini
-      shell: bash
+        if (!(Test-Path emailer.config)) { "Secret=yoursecret" | Out-File emailer.config -Encoding utf8 }
+        if (!(Test-Path emailer.ini))   { "Subject_demo"    | Out-File emailer.ini   -Encoding utf8 }
 
-    - name: Copy configs into publish folder
+    - name: Copy configs to publish
       run: |
-        cp emailer.config publish/${{ matrix.runtime }}/
-        cp emailer.ini   publish/${{ matrix.runtime }}/
-      shell: bash
+        Copy-Item emailer.config publish\
+        Copy-Item emailer.ini   publish\
 
-    - name: Zip artifact (runtime-specific)
-      shell: bash
+    - name: Zip artifact
       run: |
-        cd publish/${{ matrix.runtime }}
-        zip -r ../../../emailer-${{ matrix.runtime }}.zip .
+        Compress-Archive -Path publish\* -DestinationPath emailer-win64.zip
 
-    - name: Upload zip for release
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: emailer-${{ matrix.runtime }}
-        path: emailer-${{ matrix.runtime }}.zip
-        retention-days: 1
-
-  release:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-
-    - name: Display files
-      run: ls -R
+        name: emailer-win64
+        path: emailer-win64.zip
 
     - name: Create / update GitHub Release
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          emailer-win-x64/emailer-win-x64.zip
-          emailer-linux-x64/emailer-linux-x64.zip
-          emailer-osx-x64/emailer-osx-x64.zip
+        files: emailer-win64.zip
         draft: false
         prerelease: false
         tag_name: ${{ github.ref_name }}
