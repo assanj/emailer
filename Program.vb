@@ -355,7 +355,6 @@ Module Program
             File.AppendAllText("emailer.log", $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}{vbCrLf}", Encoding.UTF8)
         Catch
             ' Игнорируем ошибки логирования
-
         End Try
     End Sub
 
