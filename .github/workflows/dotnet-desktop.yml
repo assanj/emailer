@@ -36,6 +36,7 @@ jobs:
         path: publish/
         retention-days: 30
 
+  # ↓↓↓ ДОБАВЬТЕ ЭТОТ JOB ↓↓↓
   release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
