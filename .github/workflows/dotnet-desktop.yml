@@ -1,4 +1,4 @@
-name: Build Emailer 
+name: Build Emailer
 
 on:
   push:
@@ -36,8 +36,8 @@ jobs:
     - name: Create GitHub Release with ZIP
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: v${{ github.run_number }}
-        name: "Emailer v${{ github.run_number }}"
+        tag_name: v${{ github.run_number }}-${{ github.run_attempt }}
+        name: "Emailer v${{ github.run_number }}.${{ github.run_attempt }}"
         files: Emailer-v${{ github.run_number }}.zip
         generate_release_notes: true
         draft: false
@@ -52,5 +52,6 @@ jobs:
           
           📅 Собрано: ${{ github.event.head_commit.timestamp }}
           🔖 Коммит: ${{ github.sha }}
+          🔧 Сборка: ${{ github.run_number }} (попытка ${{ github.run_attempt }})
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
