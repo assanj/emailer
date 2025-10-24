@@ -24,10 +24,10 @@ jobs:
       run: dotnet restore "emailer.vbproj"
 
     - name: Build
-      run: dotnet build "emailer.vbproj" --configuration Release --no-restore
+      run: dotnet build "emailer.vbproj" --configuration Release --no-restore /nowarn:CA1416
 
     - name: Publish
-      run: dotnet publish "emailer.vbproj" --configuration Release --runtime win-x64 --output publish --self-contained true
+      run: dotnet publish "emailer.vbproj" --configuration Release --runtime win-x64 --output publish --self-contained true /nowarn:CA1416
 
     - name: Upload EXE artifact
       uses: actions/upload-artifact@v4
