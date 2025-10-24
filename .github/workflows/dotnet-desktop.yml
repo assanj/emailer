@@ -26,11 +26,10 @@ jobs:
         dotnet-version: 8.0.x
 
     - name: List project files
+      shell: bash
       run: |
         if [ "${{ matrix.runtime }}" = "win-x64" ]; then
-          dir *.vbproj /s
-          dir *.csproj /s
-          dir *.sln /s
+          find . -name "*.vbproj" -o -name "*.csproj" -o -name "*.sln"
         else
           find . -name "*.vbproj" -o -name "*.csproj" -o -name "*.sln"
         fi
@@ -45,9 +44,10 @@ jobs:
       run: dotnet publish "emailer.vbproj" --configuration ${{ matrix.configuration }} --runtime ${{ matrix.runtime }} --output publish/${{ matrix.runtime }} --self-contained true
 
     - name: List published files
+      shell: bash
       run: |
         if [ "${{ matrix.runtime }}" = "win-x64" ]; then
-          dir publish\${{ matrix.runtime }}
+          ls -la publish/${{ matrix.runtime }}/
         else
           ls -la publish/${{ matrix.runtime }}/
         fi
