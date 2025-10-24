@@ -29,37 +29,19 @@ jobs:
     - name: Publish
       run: dotnet publish "emailer.vbproj" --configuration Release --runtime win-x64 --output publish --self-contained true /nowarn:CA1416
 
+    - name: List published files
+      run: dir publish
+
     - name: Upload EXE artifact
       uses: actions/upload-artifact@v4
       with:
-        name: emailer-windows
-        path: publish/
+        name: emailer-windows-exe
+        path: publish/emailer.exe
         retention-days: 30
 
-  release:
-    needs: build
-    if: ${{ success() }}
-    runs-on: windows-latest
-    
-    steps:
-    - name: Download artifact
-      uses: actions/download-artifact@v4
+    - name: Upload full package artifact
+      uses: actions/upload-artifact@v4
       with:
-        name: emailer-windows
-        path: release-files
-
-    - name: Create Tag and Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: build-${{ github.run_id }}-${{ github.run_number }}
-        name: "Auto Release Build ${{ github.run_number }}"
-        files: release-files/**/*
-        generate_release_notes: true
-        draft: false
-        prerelease: true
-        body: |
-          Автоматически собранная версия от ${{ github.event.head_commit.timestamp }}
-          
-          Коммит: ${{ github.sha }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        name: emailer-windows-full
+        path: publish/
+        retention-days: 30
