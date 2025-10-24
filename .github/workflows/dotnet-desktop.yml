@@ -48,10 +48,12 @@ jobs:
         name: emailer-windows
         path: release-files
 
-    - name: Create GitHub Release
+    - name: Create GitHub Release with EXE
       uses: softprops/action-gh-release@v1
       with:
-        files: release-files/**/*
+        files: |
+          release-files/emailer.exe
+          release-files/*
         generate_release_notes: true
         draft: false
         prerelease: false
