@@ -26,12 +26,10 @@ jobs:
       run: |
         echo "=== Searching for project files in root ==="
         
-        # Ищем все проектные файлы в корне
         PROJECT_FILES=$(find . -maxdepth 1 -name "*.vbproj" -o -name "*.csproj" | head -5)
         
         if [ -z "$PROJECT_FILES" ]; then
           echo "❌ No project files found in root directory!"
-          echo "Files in root:"
           ls -la
           exit 1
         fi
@@ -39,7 +37,6 @@ jobs:
         echo "📁 Found project files:"
         echo "$PROJECT_FILES"
         
-        # Берем первый найденный проект
         PROJECT_FILE=$(echo "$PROJECT_FILES" | head -1)
         echo "✅ Using project file: $PROJECT_FILE"
         echo "PROJECT_FILE=$PROJECT_FILE" >> $GITHUB_OUTPUT
@@ -62,7 +59,7 @@ jobs:
 
   release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/')
+    if: ${{ success() }}  # ← Авто-релиз при любой успешной сборке
     runs-on: windows-latest
     
     steps:
