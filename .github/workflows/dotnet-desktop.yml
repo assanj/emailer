@@ -20,14 +20,38 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
+    - name: Find and verify project file
+      id: find_project
+      shell: bash
+      run: |
+        echo "=== Searching for project files in root ==="
+        
+        # Ищем все проектные файлы в корне
+        PROJECT_FILES=$(find . -maxdepth 1 -name "*.vbproj" -o -name "*.csproj" | head -5)
+        
+        if [ -z "$PROJECT_FILES" ]; then
+          echo "❌ No project files found in root directory!"
+          echo "Files in root:"
+          ls -la
+          exit 1
+        fi
+        
+        echo "📁 Found project files:"
+        echo "$PROJECT_FILES"
+        
+        # Берем первый найденный проект
+        PROJECT_FILE=$(echo "$PROJECT_FILES" | head -1)
+        echo "✅ Using project file: $PROJECT_FILE"
+        echo "PROJECT_FILE=$PROJECT_FILE" >> $GITHUB_OUTPUT
+
     - name: Restore dependencies
-      run: dotnet restore "emailer.vbproj"
+      run: dotnet restore "${{ steps.find_project.outputs.PROJECT_FILE }}"
 
     - name: Build
-      run: dotnet build "emailer.vbproj" --configuration Release --no-restore /nowarn:CA1416
+      run: dotnet build "${{ steps.find_project.outputs.PROJECT_FILE }}" --configuration Release --no-restore /nowarn:CA1416
 
     - name: Publish
-      run: dotnet publish "emailer.vbproj" --configuration Release --runtime win-x64 --output publish --self-contained true /nowarn:CA1416
+      run: dotnet publish "${{ steps.find_project.outputs.PROJECT_FILE }}" --configuration Release --runtime win-x64 --output publish --self-contained true /nowarn:CA1416
 
     - name: Upload EXE to Artifacts
       uses: actions/upload-artifact@v4
