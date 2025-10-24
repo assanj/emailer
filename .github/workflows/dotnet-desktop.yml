@@ -1,16 +1,16 @@
-name: Build Windows Release 
+name: Build Emailer
 
 on:
   push:
-    tags: [ "v*" ]
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-release:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout
+    - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Setup .NET
@@ -18,47 +18,39 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    - name: Restore & Build
+    - name: Restore dependencies
+      run: dotnet restore "Emailer.vbproj"
+
+    - name: Build
+      run: dotnet build "Emailer.vbproj" --configuration Release --no-restore /nowarn:CA1416
+
+    - name: Publish
+      run: dotnet publish "Emailer.vbproj" --configuration Release --runtime win-x64 --output publish --self-contained true /nowarn:CA1416
+
+    - name: Create ZIP archive
+      shell: cmd
       run: |
-        dotnet restore emailer.vbproj
-        dotnet build emailer.vbproj -c Release --no-restore
+        cd publish
+        powershell -Command "Compress-Archive -Path '*' -DestinationPath '..\Emailer-v${{ github.run_number }}.zip'"
 
-    - name: Publish (single-file, self-contained)
-      run: >
-        dotnet publish emailer.vbproj
-        -c Release
-        -r win-x64
-        -p:PublishSingleFile=true
-        -p:SelfContained=true
-        -p:IncludeNativeLibrariesForSelfExtract=true
-        -o publish
-
-    - name: Create default config & ini
-      run: |
-        if (!(Test-Path emailer.config)) { "Secret=yoursecret" | Out-File emailer.config -Encoding utf8 }
-        if (!(Test-Path emailer.ini))   { "Subject_demo"    | Out-File emailer.ini   -Encoding utf8 }
-
-    - name: Copy configs to publish
-      run: |
-        Copy-Item emailer.config publish\
-        Copy-Item emailer.ini   publish\
-
-    - name: Zip artifact
-      run: |
-        Compress-Archive -Path publish\* -DestinationPath emailer-win64.zip
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: emailer-win64
-        path: emailer-win64.zip
-
-    - name: Create / update GitHub Release
+    - name: Create GitHub Release with ZIP
       uses: softprops/action-gh-release@v1
       with:
-        files: emailer-win64.zip
+        tag_name: v${{ github.run_number }}
+        name: "Emailer v${{ github.run_number }}"
+        files: Emailer-v${{ github.run_number }}.zip
+        generate_release_notes: true
         draft: false
         prerelease: false
-        tag_name: ${{ github.ref_name }}
+        body: |
+          🚀 Автоматически собранная версия Emailer
+          
+          ## Что внутри:
+          - Готовое приложение Emailer.exe
+          - Все необходимые зависимости
+          - Полностью самодостаточный ZIP
+          
+          📅 Собрано: ${{ github.event.head_commit.timestamp }}
+          🔖 Коммит: ${{ github.sha }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
