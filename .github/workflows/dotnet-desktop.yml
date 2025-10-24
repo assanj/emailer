@@ -3,8 +3,6 @@ name: Build Emailer
 on:
   push:
     branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
@@ -20,61 +18,27 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    - name: Find and verify project file
-      id: find_project
-      shell: bash
-      run: |
-        echo "=== Searching for project files in root ==="
-        
-        PROJECT_FILES=$(find . -maxdepth 1 -name "*.vbproj" -o -name "*.csproj" | head -5)
-        
-        if [ -z "$PROJECT_FILES" ]; then
-          echo "❌ No project files found in root directory!"
-          ls -la
-          exit 1
-        fi
-        
-        echo "📁 Found project files:"
-        echo "$PROJECT_FILES"
-        
-        PROJECT_FILE=$(echo "$PROJECT_FILES" | head -1)
-        echo "✅ Using project file: $PROJECT_FILE"
-        echo "PROJECT_FILE=$PROJECT_FILE" >> $GITHUB_OUTPUT
-
     - name: Restore dependencies
-      run: dotnet restore "${{ steps.find_project.outputs.PROJECT_FILE }}"
+      run: dotnet restore "Emailer.vbproj"
 
     - name: Build
-      run: dotnet build "${{ steps.find_project.outputs.PROJECT_FILE }}" --configuration Release --no-restore /nowarn:CA1416
+      run: dotnet build "Emailer.vbproj" --configuration Release --no-restore /nowarn:CA1416
 
     - name: Publish
-      run: dotnet publish "${{ steps.find_project.outputs.PROJECT_FILE }}" --configuration Release --runtime win-x64 --output publish --self-contained true /nowarn:CA1416
+      run: dotnet publish "Emailer.vbproj" --configuration Release --runtime win-x64 --output publish --self-contained true /nowarn:CA1416
 
-    - name: Upload EXE to Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: emailer-windows
-        path: publish/
-        retention-days: 30
-
-  release:
-    needs: build
-    if: ${{ success() }}  # ← Авто-релиз при любой успешной сборке
-    runs-on: windows-latest
-    
-    steps:
-    - name: Download artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: emailer-windows
-        path: release-files
-
-    - name: Create GitHub Release
+    - name: Create GitHub Release with EXE
       uses: softprops/action-gh-release@v1
       with:
-        files: release-files/**/*
+        tag_name: build-${{ github.run_number }}
+        name: "Build ${{ github.run_number }} - ${{ github.sha }}"
+        files: publish/**
         generate_release_notes: true
         draft: false
-        prerelease: false
+        prerelease: true
+        body: |
+          Автоматически собранная версия
+          Коммит: ${{ github.sha }}
+          Дата: ${{ github.event.head_commit.timestamp }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
