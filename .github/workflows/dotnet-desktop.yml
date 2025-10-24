@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-release:
+  build:
     runs-on: windows-latest
 
     steps:
@@ -27,24 +27,9 @@ jobs:
     - name: Publish
       run: dotnet publish "Emailer.vbproj" --configuration Release --runtime win-x64 --output publish --self-contained true /nowarn:CA1416
 
-    - name: Verify EXE files exist
-      run: |
-        echo "=== Checking publish folder ==="
-        dir publish
-        echo "=== EXE file details ==="
-        dir publish\Emailer.exe
-
-    - name: Create GitHub Release with EXE
-      uses: softprops/action-gh-release@v1
+    - name: Upload EXE artifact
+      uses: actions/upload-artifact@v4
       with:
-        tag_name: v${{ github.run_number }}
-        name: "Version ${{ github.run_number }}"
-        files: |
-          publish/Emailer.exe
-          publish/*.dll
-          publish/*.json
-        generate_release_notes: true
-        draft: false
-        prerelease: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        name: Emailer-Windows
+        path: publish/
+        retention-days: 30
