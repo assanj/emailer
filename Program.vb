@@ -1,4 +1,4 @@
-п»їImports System
+Imports System
 Imports System.IO
 Imports System.Net
 Imports System.Net.Mail
@@ -9,7 +9,7 @@ Imports Microsoft.Win32
 Imports System.Reflection
 
 Module Program
-    ' РРјРїРѕСЂС‚ РґР»СЏ СЃРєСЂС‹С‚РёСЏ РєРѕРЅСЃРѕР»Рё
+    ' Импорт для скрытия консоли
     <DllImport("kernel32.dll")>
     Private Function GetConsoleWindow() As IntPtr
     End Function
@@ -22,19 +22,19 @@ Module Program
     Private Const SW_SHOW As Integer = 5
     Private Const REGISTRY_PATH As String = "HKEY_CURRENT_USER\Software\Emailer"
 
-    ' Р”РѕР±Р°РІР»СЏРµРј С„Р»Р°Рі РґР»СЏ РѕС‚Р»Р°РґРєРё
+    ' Добавляем флаг для отладки
     Private isDebugMode As Boolean = False
     Private commandLineSubject As String = Nothing
 
     Sub Main(args As String())
-        ' РћР±СЂР°Р±Р°С‚С‹РІР°РµРј Р°СЂРіСѓРјРµРЅС‚С‹ РєРѕРјР°РЅРґРЅРѕР№ СЃС‚СЂРѕРєРё
+        ' Обрабатываем аргументы командной строки
         ParseCommandLineArgs(args)
 
         If isDebugMode Then
             ShowConsoleWindow()
-            Console.WriteLine("Р РµР¶РёРј РѕС‚Р»Р°РґРєРё Р°РєС‚РёРІРёСЂРѕРІР°РЅ")
+            Console.WriteLine("Режим отладки активирован")
             If Not String.IsNullOrEmpty(commandLineSubject) Then
-                Console.WriteLine($"РўРµРјР° РёР· РєРѕРјР°РЅРґРЅРѕР№ СЃС‚СЂРѕРєРё: {commandLineSubject}")
+                Console.WriteLine($"Тема из командной строки: {commandLineSubject}")
             End If
         Else
             HideConsoleWindow()
@@ -43,11 +43,11 @@ Module Program
         Try
             SendEmail()
         Catch ex As Exception
-            LogError($"РљСЂРёС‚РёС‡РµСЃРєР°СЏ РѕС€РёР±РєР°: {ex.Message}")
+            LogError($"Критическая ошибка: {ex.Message}")
         End Try
 
         If isDebugMode Then
-            Console.WriteLine("РќР°Р¶РјРёС‚Рµ Р»СЋР±СѓСЋ РєР»Р°РІРёС€Сѓ РґР»СЏ РІС‹С…РѕРґР°...")
+            Console.WriteLine("Нажмите любую клавишу для выхода...")
             Console.ReadKey()
         End If
     End Sub
@@ -62,17 +62,17 @@ Module Program
                     Case "/subject", "-subject"
                         If i + 1 < args.Length Then
                             commandLineSubject = args(i + 1)
-                            i += 1 ' РџСЂРѕРїСѓСЃРєР°РµРј СЃР»РµРґСѓСЋС‰РёР№ Р°СЂРіСѓРјРµРЅС‚, С‚Р°Рє РєР°Рє РѕРЅ Р·РЅР°С‡РµРЅРёРµ
+                            i += 1 ' Пропускаем следующий аргумент, так как он значение
                         Else
-                            LogError("РџР°СЂР°РјРµС‚СЂ /subject СѓРєР°Р·Р°РЅ Р±РµР· Р·РЅР°С‡РµРЅРёСЏ")
+                            LogError("Параметр /subject указан без значения")
                         End If
 
-                    Case "/s", "-s" ' РљРѕСЂРѕС‚РєР°СЏ РІРµСЂСЃРёСЏ РїР°СЂР°РјРµС‚СЂР° subject
+                    Case "/s", "-s" ' Короткая версия параметра subject
                         If i + 1 < args.Length Then
                             commandLineSubject = args(i + 1)
                             i += 1
                         Else
-                            LogError("РџР°СЂР°РјРµС‚СЂ /s СѓРєР°Р·Р°РЅ Р±РµР· Р·РЅР°С‡РµРЅРёСЏ")
+                            LogError("Параметр /s указан без значения")
                         End If
                 End Select
             Next
@@ -86,7 +86,7 @@ Module Program
                 ShowWindow(consoleHandle, SW_HIDE)
             End If
         Catch ex As Exception
-            LogError($"РћС€РёР±РєР° СЃРєСЂС‹С‚РёСЏ РєРѕРЅСЃРѕР»Рё: {ex.Message}")
+            LogError($"Ошибка скрытия консоли: {ex.Message}")
         End Try
     End Sub
 
@@ -97,7 +97,7 @@ Module Program
                 ShowWindow(consoleHandle, SW_SHOW)
             End If
         Catch ex As Exception
-            ' РРіРЅРѕСЂРёСЂСѓРµРј РѕС€РёР±РєРё РїСЂРё РїРѕРєР°Р·Рµ РєРѕРЅСЃРѕР»Рё
+            ' Игнорируем ошибки при показе консоли
         End Try
     End Sub
 
@@ -116,7 +116,7 @@ Module Program
         Dim settings As New EmailSettings()
 
         Try
-            ' Р§РёС‚Р°РµРј РїР°СЂР°РјРµС‚СЂС‹ РёР· СЂРµРµСЃС‚СЂР°
+            ' Читаем параметры из реестра
             settings.Secret = GetRegistryValue("Secret", "")
             settings.Username = GetRegistryValue("Username", "DOMAIN\user")
             settings.SmtpServer = GetRegistryValue("SmtpServer", "mail.domain.ru")
@@ -125,18 +125,18 @@ Module Program
             settings.ToEmail = GetRegistryValue("ToEmail", "account@domain.ru")
             settings.EnableSSL = Boolean.Parse(GetRegistryValue("EnableSSL", "True"))
 
-            ' РћРїСЂРµРґРµР»СЏРµРј С‚РµРјСѓ: СЃРЅР°С‡Р°Р»Р° РёР· РєРѕРјР°РЅРґРЅРѕР№ СЃС‚СЂРѕРєРё, РїРѕС‚РѕРј РёР· С„Р°Р№Р»Р°
+            ' Определяем тему: сначала из командной строки, потом из файла
             settings.Subject = DetermineSubject()
 
-            ' Р•СЃР»Рё СЃРµРєСЂРµС‚РЅС‹Р№ РєР»СЋС‡ РїСѓСЃС‚РѕР№, СЃРѕР·РґР°РµРј Р·РЅР°С‡РµРЅРёСЏ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
+            ' Если секретный ключ пустой, создаем значения по умолчанию
             If String.IsNullOrEmpty(settings.Secret) Then
                 CreateDefaultRegistrySettings()
-                settings.Secret = "yoursecret" ' РЈСЃС‚Р°РЅР°РІР»РёРІР°РµРј Р·РЅР°С‡РµРЅРёРµ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
+                settings.Secret = "yoursecret" ' Устанавливаем значение по умолчанию
             End If
 
         Catch ex As Exception
-            LogError($"РћС€РёР±РєР° С‡С‚РµРЅРёСЏ РЅР°СЃС‚СЂРѕРµРє: {ex.Message}")
-            ' РЎРѕР·РґР°РµРј РЅР°СЃС‚СЂРѕР№РєРё РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РїСЂРё РѕС€РёР±РєРµ
+            LogError($"Ошибка чтения настроек: {ex.Message}")
+            ' Создаем настройки по умолчанию при ошибке
             CreateDefaultRegistrySettings()
         End Try
 
@@ -144,40 +144,40 @@ Module Program
     End Function
 
     Private Function DetermineSubject() As String
-        ' РџСЂРёРѕСЂРёС‚РµС‚: РєРѕРјР°РЅРґРЅР°СЏ СЃС‚СЂРѕРєР° -> С„Р°Р№Р» -> Р·РЅР°С‡РµРЅРёРµ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
+        ' Приоритет: командная строка -> файл -> значение по умолчанию
         If Not String.IsNullOrEmpty(commandLineSubject) Then
             If isDebugMode Then
-                Console.WriteLine($"РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ С‚РµРјР° РёР· РєРѕРјР°РЅРґРЅРѕР№ СЃС‚СЂРѕРєРё: {commandLineSubject}")
+                Console.WriteLine($"Используется тема из командной строки: {commandLineSubject}")
             End If
             Return commandLineSubject
         End If
 
         Dim fileSubject As String = ReadSubjectFromFile()
         If isDebugMode Then
-            Console.WriteLine($"РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ С‚РµРјР° РёР· С„Р°Р№Р»Р°: {fileSubject}")
+            Console.WriteLine($"Используется тема из файла: {fileSubject}")
         End If
         Return fileSubject
     End Function
 
     Private Function ReadSubjectFromFile() As String
         Try
-            ' РСЃРїРѕР»СЊР·СѓРµРј Р°Р±СЃРѕР»СЋС‚РЅС‹Р№ РїСѓС‚СЊ Рє С„Р°Р№Р»Сѓ
+            ' Используем абсолютный путь к файлу
             Dim appDir As String = GetApplicationDirectory()
             Dim subjectFile As String = Path.Combine(appDir, "emailer.ini")
             Dim defaultSubject As String = "Subject_demo"
 
             If isDebugMode Then
-                Console.WriteLine($"РС‰РµРј С„Р°Р№Р» РЅР°СЃС‚СЂРѕРµРє: {subjectFile}")
-                Console.WriteLine($"РўРµРєСѓС‰Р°СЏ РґРёСЂРµРєС‚РѕСЂРёСЏ: {Directory.GetCurrentDirectory()}")
+                Console.WriteLine($"Ищем файл настроек: {subjectFile}")
+                Console.WriteLine($"Текущая директория: {Directory.GetCurrentDirectory()}")
             End If
 
             If Not File.Exists(subjectFile) Then
-                ' РЎРѕР·РґР°РµРј С„Р°Р№Р» СЃ С‚РµРјРѕР№ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ
+                ' Создаем файл с темой по умолчанию
                 File.WriteAllText(subjectFile, defaultSubject, Encoding.UTF8)
-                LogMessage($"РЎРѕР·РґР°РЅ С„Р°Р№Р» РЅР°СЃС‚СЂРѕРµРє: {subjectFile}")
+                LogMessage($"Создан файл настроек: {subjectFile}")
 
                 If isDebugMode Then
-                    Console.WriteLine($"РЎРѕР·РґР°РЅ С„Р°Р№Р» РЅР°СЃС‚СЂРѕРµРє: {subjectFile}")
+                    Console.WriteLine($"Создан файл настроек: {subjectFile}")
                 End If
 
                 Return defaultSubject
@@ -186,23 +186,23 @@ Module Program
             Dim subject As String = File.ReadAllText(subjectFile, Encoding.UTF8).Trim()
 
             If isDebugMode Then
-                Console.WriteLine($"РџСЂРѕС‡РёС‚Р°РЅР° С‚РµРјР° РёР· С„Р°Р№Р»Р°: {subject}")
+                Console.WriteLine($"Прочитана тема из файла: {subject}")
             End If
 
             Return If(String.IsNullOrEmpty(subject), defaultSubject, subject)
 
         Catch ex As Exception
-            LogError($"РћС€РёР±РєР° С‡С‚РµРЅРёСЏ С‚РµРјС‹: {ex.Message}")
+            LogError($"Ошибка чтения темы: {ex.Message}")
             Return "Subject_demo"
         End Try
     End Function
 
     Private Function GetApplicationDirectory() As String
         Try
-            ' РџРѕР»СѓС‡Р°РµРј РґРёСЂРµРєС‚РѕСЂРёСЋ, РіРґРµ РЅР°С…РѕРґРёС‚СЃСЏ РёСЃРїРѕР»РЅСЏРµРјС‹Р№ С„Р°Р№Р»
+            ' Получаем директорию, где находится исполняемый файл
             Return Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
         Catch ex As Exception
-            ' Р•СЃР»Рё РІРѕР·РЅРёРєР»Р° РѕС€РёР±РєР°, РёСЃРїРѕР»СЊР·СѓРµРј С‚РµРєСѓС‰СѓСЋ РґРёСЂРµРєС‚РѕСЂРёСЋ
+            ' Если возникла ошибка, используем текущую директорию
             Return Directory.GetCurrentDirectory()
         End Try
     End Function
@@ -212,14 +212,14 @@ Module Program
             Dim value As Object = Registry.GetValue(REGISTRY_PATH, keyName, defaultValue)
             Return If(value?.ToString(), defaultValue)
         Catch ex As Exception
-            LogError($"РћС€РёР±РєР° С‡С‚РµРЅРёСЏ РёР· СЂРµРµСЃС‚СЂР° ({keyName}): {ex.Message}")
+            LogError($"Ошибка чтения из реестра ({keyName}): {ex.Message}")
             Return defaultValue
         End Try
     End Function
 
     Private Sub CreateDefaultRegistrySettings()
         Try
-            ' РЎРѕР·РґР°РµРј Р·РЅР°С‡РµРЅРёСЏ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РІ СЂРµРµСЃС‚СЂРµ
+            ' Создаем значения по умолчанию в реестре
             SaveRegistryValue("Secret", "yoursecret")
             SaveRegistryValue("Username", "DOMAIN\user")
             SaveRegistryValue("SmtpServer", "mail.domain.ru")
@@ -228,13 +228,13 @@ Module Program
             SaveRegistryValue("ToEmail", "account@domain.ru")
             SaveRegistryValue("EnableSSL", "True")
 
-            LogMessage("РЎРѕР·РґР°РЅС‹ РЅР°СЃС‚СЂРѕР№РєРё РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РІ СЂРµРµСЃС‚СЂРµ")
+            LogMessage("Созданы настройки по умолчанию в реестре")
 
             If isDebugMode Then
-                Console.WriteLine("РЎРѕР·РґР°РЅС‹ РЅР°СЃС‚СЂРѕР№РєРё РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РІ СЂРµРµСЃС‚СЂРµ")
+                Console.WriteLine("Созданы настройки по умолчанию в реестре")
             End If
         Catch ex As Exception
-            LogError($"РћС€РёР±РєР° СЃРѕР·РґР°РЅРёСЏ РЅР°СЃС‚СЂРѕРµРє РІ СЂРµРµСЃС‚СЂРµ: {ex.Message}")
+            LogError($"Ошибка создания настроек в реестре: {ex.Message}")
         End Try
     End Sub
 
@@ -242,7 +242,7 @@ Module Program
         Try
             Registry.SetValue(REGISTRY_PATH, keyName, value)
         Catch ex As Exception
-            Throw New Exception($"РћС€РёР±РєР° СЃРѕС…СЂР°РЅРµРЅРёСЏ {keyName} РІ СЂРµРµСЃС‚СЂ: {ex.Message}")
+            Throw New Exception($"Ошибка сохранения {keyName} в реестр: {ex.Message}")
         End Try
     End Sub
 
@@ -252,29 +252,29 @@ Module Program
         Try
             settings = ReadSettings()
 
-            ' РџСЂРѕРІРµСЂСЏРµРј РЅР°СЃС‚СЂРѕР№РєРё
+            ' Проверяем настройки
             If String.IsNullOrEmpty(settings.Secret) OrElse settings.Secret = "yoursecret" Then
-                LogError("РџР°СЂРѕР»СЊ РЅРµ РЅР°СЃС‚СЂРѕРµРЅ РІ СЂРµРµСЃС‚СЂРµ. РСЃРїРѕР»СЊР·СѓР№С‚Рµ Р·РЅР°С‡РµРЅРёРµ РѕС‚Р»РёС‡РЅРѕРµ РѕС‚ 'yoursecret'")
+                LogError("Пароль не настроен в реестре. Используйте значение отличное от 'yoursecret'")
                 Return
             End If
 
             If isDebugMode Then
-                Console.WriteLine($"РџСЂРѕРІРµСЂРєР° РЅР°СЃС‚СЂРѕРµРє:")
-                Console.WriteLine($"  SMTP СЃРµСЂРІРµСЂ: {settings.SmtpServer}:{settings.SmtpPort}")
-                Console.WriteLine($"  РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ: {settings.Username}")
+                Console.WriteLine($"Проверка настроек:")
+                Console.WriteLine($"  SMTP сервер: {settings.SmtpServer}:{settings.SmtpPort}")
+                Console.WriteLine($"  Пользователь: {settings.Username}")
                 Console.WriteLine($"  SSL: {settings.EnableSSL}")
-                Console.WriteLine($"  РћС‚: {settings.FromEmail}")
-                Console.WriteLine($"  РљРѕРјСѓ: {settings.ToEmail}")
-                Console.WriteLine($"  РўРµРјР°: {settings.Subject}")
+                Console.WriteLine($"  От: {settings.FromEmail}")
+                Console.WriteLine($"  Кому: {settings.ToEmail}")
+                Console.WriteLine($"  Тема: {settings.Subject}")
             End If
 
-            ' РЎРѕР±РёСЂР°РµРј СЃРёСЃС‚РµРјРЅСѓСЋ РёРЅС„РѕСЂРјР°С†РёСЋ
+            ' Собираем системную информацию
             Dim systemInfo = CollectSystemInfo()
 
             Using smtpClient As New SmtpClient(settings.SmtpServer, settings.SmtpPort)
                 smtpClient.EnableSsl = settings.EnableSSL
                 smtpClient.Credentials = New NetworkCredential(settings.Username, settings.Secret)
-                smtpClient.Timeout = 30000 ' 30 СЃРµРєСѓРЅРґ С‚Р°Р№РјР°СѓС‚
+                smtpClient.Timeout = 30000 ' 30 секунд таймаут
 
                 Dim mailMessage As New MailMessage()
                 mailMessage.From = New MailAddress(settings.FromEmail)
@@ -286,26 +286,26 @@ Module Program
                 mailMessage.IsBodyHtml = False
 
                 If isDebugMode Then
-                    Console.WriteLine("РџРѕРїС‹С‚РєР° РѕС‚РїСЂР°РІРєРё email...")
+                    Console.WriteLine("Попытка отправки email...")
                 End If
 
                 smtpClient.Send(mailMessage)
 
-                LogMessage($"РџРёСЃСЊРјРѕ РѕС‚РїСЂР°РІР»РµРЅРѕ: {settings.Subject}")
+                LogMessage($"Письмо отправлено: {settings.Subject}")
 
                 If isDebugMode Then
-                    Console.WriteLine("РџРёСЃСЊРјРѕ СѓСЃРїРµС€РЅРѕ РѕС‚РїСЂР°РІР»РµРЅРѕ!")
+                    Console.WriteLine("Письмо успешно отправлено!")
                 End If
             End Using
 
         Catch ex As Exception
-            Dim errorMsg = $"РћС€РёР±РєР° РѕС‚РїСЂР°РІРєРё: {ex.Message}"
+            Dim errorMsg = $"Ошибка отправки: {ex.Message}"
             LogError(errorMsg)
 
             If isDebugMode Then
                 Console.WriteLine(errorMsg)
                 If settings IsNot Nothing Then
-                    Console.WriteLine($"РџСЂРѕРІРµСЂСЊС‚Рµ РЅР°СЃС‚СЂРѕР№РєРё SMTP: {settings.SmtpServer}:{settings.SmtpPort}")
+                    Console.WriteLine($"Проверьте настройки SMTP: {settings.SmtpServer}:{settings.SmtpPort}")
                 End If
             End If
         End Try
@@ -332,19 +332,19 @@ Module Program
     Private Function CreateEmailBody(systemInfo As SystemInfo, settings As EmailSettings) As String
         Dim sb As New StringBuilder()
 
-        sb.AppendLine("РЈРІРµРґРѕРјР»РµРЅРёРµ РѕС‚ Emailer")
+        sb.AppendLine("Уведомление от Emailer")
         sb.AppendLine()
-        sb.AppendLine($"РљРѕРјРїСЊСЋС‚РµСЂ: {systemInfo.ComputerName}")
-        sb.AppendLine($"РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ: {systemInfo.CurrentUser}")
-        'sb.AppendLine($"Р”РѕРјРµРЅ: {systemInfo.DomainName}")
-        sb.AppendLine($"Р’СЂРµРјСЏ: {systemInfo.CurrentTime}")
-        'sb.AppendLine($"РћРЎ: {systemInfo.OSVersion}")
+        sb.AppendLine($"Компьютер: {systemInfo.ComputerName}")
+        sb.AppendLine($"Пользователь: {systemInfo.CurrentUser}")
+        'sb.AppendLine($"Домен: {systemInfo.DomainName}")
+        sb.AppendLine($"Время: {systemInfo.CurrentTime}")
+        'sb.AppendLine($"ОС: {systemInfo.OSVersion}")
 
         If isDebugMode Then
             sb.AppendLine()
-            sb.AppendLine("--- РћС‚Р»Р°РґРѕС‡РЅР°СЏ РёРЅС„РѕСЂРјР°С†РёСЏ ---")
-            sb.AppendLine($"SMTP СЃРµСЂРІРµСЂ: {settings.SmtpServer}:{settings.SmtpPort}")
-            sb.AppendLine($"SSL РІРєР»СЋС‡РµРЅ: {settings.EnableSSL}")
+            sb.AppendLine("--- Отладочная информация ---")
+            sb.AppendLine($"SMTP сервер: {settings.SmtpServer}:{settings.SmtpPort}")
+            sb.AppendLine($"SSL включен: {settings.EnableSSL}")
         End If
 
         Return sb.ToString()
@@ -354,7 +354,7 @@ Module Program
         Try
             File.AppendAllText("emailer.log", $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}{vbCrLf}", Encoding.UTF8)
         Catch
-            ' РРіРЅРѕСЂРёСЂСѓРµРј РѕС€РёР±РєРё Р»РѕРіРёСЂРѕРІР°РЅРёСЏ
+            ' Игнорируем ошибки логирования
         End Try
     End Sub
 
@@ -362,7 +362,7 @@ Module Program
         Try
             File.AppendAllText("emailer_error.log", $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {errorMessage}{vbCrLf}", Encoding.UTF8)
         Catch
-            ' РРіРЅРѕСЂРёСЂСѓРµРј РѕС€РёР±РєРё Р»РѕРіРёСЂРѕРІР°РЅРёСЏ
+            ' Игнорируем ошибки логирования
         End Try
     End Sub
 End Module

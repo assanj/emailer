@@ -1,4 +1,4 @@
-name: Build VB.NET Emailer
+name: Build Emailer
 
 on:
   push:
@@ -9,7 +9,12 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      matrix:
+        configuration: [Release]
+        runtime: [win-x64, linux-x64, osx-x64]
+    
+    runs-on: ${{ matrix.runtime == 'win-x64' && 'windows-latest' || matrix.runtime == 'linux-x64' && 'ubuntu-latest' || 'macos-latest' }}
 
     steps:
     - name: Checkout code
@@ -18,43 +23,66 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: 8.0.x
 
-    - name: Find and set main project
-      id: find-project
+    - name: Clean legacy files
       run: |
-        # Ищем первый vbproj файл
-        $projectFile = Get-ChildItem -Path . -Recurse -Filter *.vbproj | Select-Object -First 1
-        if ($projectFile) {
-          echo "Найден проект: $($projectFile.FullName)"
-          echo "PROJECT_PATH=$($projectFile.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-        } else {
-          # Если нет vbproj, ищем csproj
-          $projectFile = Get-ChildItem -Path . -Recurse -Filter *.csproj | Select-Object -First 1
-          if ($projectFile) {
-            echo "Найден проект: $($projectFile.FullName)"
-            echo "PROJECT_PATH=$($projectFile.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
-          } else {
-            echo "Проектный файл не найден!"
-            exit 1
-          }
-        }
+        if [ "${{ matrix.runtime }}" = "win-x64" ]; then
+          Remove-Item -Force -ErrorAction SilentlyContinue *.Designer.vb, AssemblyInfo.vb
+        else
+          find . -name "*.Designer.vb" -delete -o -name "AssemblyInfo.vb" -delete
+        fi
 
     - name: Restore dependencies
-      run: dotnet restore "${{ env.PROJECT_PATH }}"
+      run: dotnet restore
 
     - name: Build
-      run: dotnet build "${{ env.PROJECT_PATH }}" --configuration Release --no-restore
+      run: dotnet build --configuration ${{ matrix.configuration }} --no-restore
+
+    - name: Test
+      run: dotnet test --verbosity normal --no-build
+      continue-on-error: true
 
     - name: Publish
-      run: dotnet publish "${{ env.PROJECT_PATH }}" --configuration Release --output publish
+      run: dotnet publish --configuration ${{ matrix.configuration }} --runtime ${{ matrix.runtime }} --output publish/${{ matrix.runtime }} --self-contained true
 
     - name: List published files
-      run: dir publish /s
+      run: |
+        if [ "${{ matrix.runtime }}" = "win-x64" ]; then
+          dir publish\${{ matrix.runtime }}
+        else
+          ls -la publish/${{ matrix.runtime }}/
+        fi
 
-    - name: Upload Artifact
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: emailer-app
-        path: publish/
-        retention-days: 5
+        name: emailer-${{ matrix.runtime }}
+        path: publish/${{ matrix.runtime }}/
+        retention-days: 7
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Display structure of downloaded files
+      run: ls -R artifacts
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          artifacts/emailer-win-x64/**
+          artifacts/emailer-linux-x64/**
+          artifacts/emailer-osx-x64/**
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
