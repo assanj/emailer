@@ -2,16 +2,17 @@ name: Build VB.NET Emailer
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: windows-latest
 
     steps:
-    - name: Checkout
+    - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Setup .NET
@@ -19,14 +20,37 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Restore
-      run: dotnet restore
+    - name: Find and set main project
+      id: find-project
+      run: |
+        # Ищем первый vbproj файл
+        $projectFile = Get-ChildItem -Path . -Recurse -Filter *.vbproj | Select-Object -First 1
+        if ($projectFile) {
+          echo "Найден проект: $($projectFile.FullName)"
+          echo "PROJECT_PATH=$($projectFile.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+        } else {
+          # Если нет vbproj, ищем csproj
+          $projectFile = Get-ChildItem -Path . -Recurse -Filter *.csproj | Select-Object -First 1
+          if ($projectFile) {
+            echo "Найден проект: $($projectFile.FullName)"
+            echo "PROJECT_PATH=$($projectFile.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append
+          } else {
+            echo "Проектный файл не найден!"
+            exit 1
+          }
+        }
+
+    - name: Restore dependencies
+      run: dotnet restore "${{ env.PROJECT_PATH }}"
 
     - name: Build
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build "${{ env.PROJECT_PATH }}" --configuration Release --no-restore
 
     - name: Publish
-      run: dotnet publish --configuration Release --output publish --self-contained false
+      run: dotnet publish "${{ env.PROJECT_PATH }}" --configuration Release --output publish
+
+    - name: List published files
+      run: dir publish /s
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
