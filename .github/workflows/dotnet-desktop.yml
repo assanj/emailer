@@ -3,31 +3,15 @@ name: Build Emailer
 on:
   push:
     branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
 jobs:
-  diagnose:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: List all files in repository
-      run: |
-        echo "=== ВСЕ ФАЙЛЫ В РЕПОЗИТОРИИ ==="
-        find . -type f | sort
-        
-        echo "=== ПРОЕКТНЫЕ ФАЙЛЫ ==="
-        find . -name "*.vbproj" -o -name "*.csproj" -o -name "*.sln" | sort
-        
-        echo "=== VB ФАЙЛЫ ==="
-        find . -name "*.vb" | sort
-
   build:
-    needs: diagnose
     strategy:
       matrix:
+        configuration: [Release]
         runtime: [win-x64, linux-x64, osx-x64]
     
     runs-on: ${{ matrix.runtime == 'win-x64' && 'windows-latest' || matrix.runtime == 'linux-x64' && 'ubuntu-latest' || 'macos-latest' }}
@@ -39,41 +23,72 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x
+        dotnet-version: 8.0.x  # Явно указываем .NET 8 вместо 9
 
-    - name: Find project file
-      id: find_project
+    - name: List project files
       run: |
-        echo "Поиск проектных файлов..."
-        PROJECT_FILE=$(find . -name "*.vbproj" -o -name "*.csproj" | head -1)
-        if [ -z "$PROJECT_FILE" ]; then
-          echo "Проектный файл не найден! Создаем новый..."
-          # Создаем минимальный vbproj файл
-          cat > emailer.vbproj << 'EOF'
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <RootNamespace>Emailer</RootNamespace>
-  </PropertyGroup>
-</Project>
-EOF
-          PROJECT_FILE="emailer.vbproj"
+        if [ "${{ matrix.runtime }}" = "win-x64" ]; then
+          dir *.vbproj /s
+          dir *.csproj /s
+          dir *.sln /s
+        else
+          find . -name "*.vbproj" -o -name "*.csproj" -o -name "*.sln"
         fi
-        echo "PROJECT_FILE=$PROJECT_FILE" >> $GITHUB_OUTPUT
-        echo "Найден проектный файл: $PROJECT_FILE"
 
-    - name: Restore dependencies
-      run: dotnet restore "${{ steps.find_project.outputs.PROJECT_FILE }}"
+    - name: Clean legacy files
+      run: |
+        if [ "${{ matrix.runtime }}" = "win-x64" ]; then
+          Remove-Item -Force -ErrorAction SilentlyContinue *.Designer.vb, AssemblyInfo.vb
+        else
+          find . -name "*.Designer.vb" -delete -o -name "AssemblyInfo.vb" -delete
+        fi
+
+    - name: Restore dependencies for VB project
+      run: dotnet restore "emailer.vbproj"
 
     - name: Build
-      run: dotnet build "${{ steps.find_project.outputs.PROJECT_FILE }}" --configuration Release --no-restore
+      run: dotnet build "emailer.vbproj" --configuration ${{ matrix.configuration }} --no-restore
 
     - name: Publish
-      run: dotnet publish "${{ steps.find_project.outputs.PROJECT_FILE }}" --configuration Release --runtime ${{ matrix.runtime }} --output publish/${{ matrix.runtime }} --self-contained true
+      run: dotnet publish "emailer.vbproj" --configuration ${{ matrix.configuration }} --runtime ${{ matrix.runtime }} --output publish/${{ matrix.runtime }} --self-contained true
+
+    - name: List published files
+      run: |
+        if [ "${{ matrix.runtime }}" = "win-x64" ]; then
+          dir publish\${{ matrix.runtime }}
+        else
+          ls -la publish/${{ matrix.runtime }}/
+        fi
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: emailer-${{ matrix.runtime }}
         path: publish/${{ matrix.runtime }}/
+        retention-days: 7
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Display structure of downloaded files
+      run: ls -R artifacts
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          artifacts/emailer-win-x64/**
+          artifacts/emailer-linux-x64/**
+          artifacts/emailer-osx-x64/**
+        draft: false
+        prereview: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
