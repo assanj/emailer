@@ -24,18 +24,12 @@ jobs:
     - name: Build
       run: dotnet build "Emailer.vbproj" --configuration Release --no-restore /nowarn:CA1416
 
-    - name: Publish
-      run: dotnet publish "Emailer.vbproj" --configuration Release --runtime win-x64 --output publish --self-contained true /nowarn:CA1416
+    - name: Publish as single EXE
+      run: dotnet publish "Emailer.vbproj" --configuration Release --runtime win-x64 --output publish --self-contained true /p:PublishSingleFile=true /nowarn:CA1416
 
-    - name: Create and Upload ZIP artifact
-      shell: cmd
-      run: |
-        cd publish
-        powershell -Command "Compress-Archive -Path '*' -DestinationPath '..\Emailer-v${{ github.run_number }}.zip'"
-        
-    - name: Upload ZIP artifact
+    - name: Upload single EXE
       uses: actions/upload-artifact@v4
       with:
         name: Emailer-v${{ github.run_number }}
-        path: Emailer-v${{ github.run_number }}.zip
+        path: publish/Emailer.exe
         retention-days: 30
