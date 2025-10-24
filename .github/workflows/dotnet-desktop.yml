@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-and-release:
     runs-on: windows-latest
 
     steps:
@@ -27,9 +27,29 @@ jobs:
     - name: Publish
       run: dotnet publish "Emailer.vbproj" --configuration Release --runtime win-x64 --output publish --self-contained true /nowarn:CA1416
 
-    - name: Upload EXE artifact
-      uses: actions/upload-artifact@v4
+    - name: Create ZIP archive
+      run: |
+        cd publish
+        powershell "Compress-Archive -Path * -DestinationPath ../Emailer-v${{ github.run_number }}.zip"
+
+    - name: Create GitHub Release with ZIP
+      uses: softprops/action-gh-release@v1
       with:
-        name: Emailer-Windows
-        path: publish/
-        retention-days: 30
+        tag_name: v${{ github.run_number }}
+        name: "Emailer v${{ github.run_number }}"
+        files: Emailer-v${{ github.run_number }}.zip
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+        body: |
+          🚀 Автоматически собранная версия Emailer
+          
+          ## Что внутри:
+          - Готовое приложение Emailer.exe
+          - Все необходимые зависимости
+          - Полностью самодостаточный ZIP
+          
+          📅 Собрано: ${{ github.event.head_commit.timestamp }}
+          🔖 Коммит: ${{ github.sha }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
