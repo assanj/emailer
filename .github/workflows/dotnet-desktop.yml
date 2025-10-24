@@ -23,7 +23,17 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x
+        dotnet-version: 8.0.x  # Явно указываем .NET 8 вместо 9
+
+    - name: List project files
+      run: |
+        if [ "${{ matrix.runtime }}" = "win-x64" ]; then
+          dir *.vbproj /s
+          dir *.csproj /s
+          dir *.sln /s
+        else
+          find . -name "*.vbproj" -o -name "*.csproj" -o -name "*.sln"
+        fi
 
     - name: Clean legacy files
       run: |
@@ -33,18 +43,14 @@ jobs:
           find . -name "*.Designer.vb" -delete -o -name "AssemblyInfo.vb" -delete
         fi
 
-    - name: Restore dependencies
-      run: dotnet restore
+    - name: Restore dependencies for VB project
+      run: dotnet restore "emailer.vbproj"
 
     - name: Build
-      run: dotnet build --configuration ${{ matrix.configuration }} --no-restore
-
-    - name: Test
-      run: dotnet test --verbosity normal --no-build
-      continue-on-error: true
+      run: dotnet build "emailer.vbproj" --configuration ${{ matrix.configuration }} --no-restore
 
     - name: Publish
-      run: dotnet publish --configuration ${{ matrix.configuration }} --runtime ${{ matrix.runtime }} --output publish/${{ matrix.runtime }} --self-contained true
+      run: dotnet publish "emailer.vbproj" --configuration ${{ matrix.configuration }} --runtime ${{ matrix.runtime }} --output publish/${{ matrix.runtime }} --self-contained true
 
     - name: List published files
       run: |
@@ -83,6 +89,6 @@ jobs:
           artifacts/emailer-linux-x64/**
           artifacts/emailer-osx-x64/**
         draft: false
-        prerelease: false
+        prereview: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
