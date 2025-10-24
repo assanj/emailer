@@ -29,11 +29,11 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore "emailer.vbproj"
 
-    - name: Build
-      run: dotnet build "emailer.vbproj" --configuration Release --no-restore
+    - name: Build without warnings
+      run: dotnet build "emailer.vbproj" --configuration Release --no-restore /nowarn:CA1416
 
-    - name: Publish
-      run: dotnet publish "emailer.vbproj" --configuration Release --runtime win-x64 --output publish/win-x64 --self-contained true
+    - name: Publish without warnings
+      run: dotnet publish "emailer.vbproj" --configuration Release --runtime win-x64 --output publish/win-x64 --self-contained true /nowarn:CA1416
 
     - name: List published files
       shell: bash

@@ -52,13 +52,13 @@ jobs:
         cp emailer.ini   publish/${{ matrix.runtime }}/ 2>/dev/null || true
 
     - name: List published files
-      shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
       run: |
-        if ($env:RUNNER_OS -eq "Windows") {
-          Get-ChildItem publish/${{ matrix.runtime }}
-        } else {
+        if [ "${{ matrix.runtime }}" = "win-x64" ]; then
+          pwsh -c "Get-ChildItem publish/${{ matrix.runtime }}"
+        else
           ls -la publish/${{ matrix.runtime }}/
-        }
+        fi
+      shell: bash
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
