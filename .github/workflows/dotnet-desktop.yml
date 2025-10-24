@@ -13,11 +13,11 @@ jobs:
       matrix:
         configuration: [Release]
         runtime: [win-x64, linux-x64, osx-x64]
-    
+
     runs-on: ${{ matrix.runtime == 'win-x64' && 'windows-latest' || matrix.runtime == 'linux-x64' && 'ubuntu-latest' || 'macos-latest' }}
 
     steps:
-    - name: Checkout code
+    - name: Checkout
       uses: actions/checkout@v4
 
     - name: Setup .NET
@@ -25,55 +25,63 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    - name: List project files
-      shell: bash
-      run: |
-        if [ "${{ matrix.runtime }}" = "win-x64" ]; then
-          find . -name "*.vbproj" -o -name "*.csproj" -o -name "*.sln"
-        else
-          find . -name "*.vbproj" -o -name "*.csproj" -o -name "*.sln"
-        fi
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.vbproj') }}
+        restore-keys: ${{ runner.os }}-nuget-
 
-    - name: Restore dependencies for VB project
-      run: dotnet restore "emailer.vbproj"
+    - name: Restore
+      run: dotnet restore emailer.vbproj
 
     - name: Build
-      run: dotnet build "emailer.vbproj" --configuration ${{ matrix.configuration }} --no-restore
+      run: dotnet build emailer.vbproj --configuration ${{ matrix.configuration }} --no-restore
 
-    - name: Publish
-      run: dotnet publish "emailer.vbproj" --configuration ${{ matrix.configuration }} --runtime ${{ matrix.runtime }} --output publish/${{ matrix.runtime }} --self-contained true
+    - name: Publish (self-contained)
+      run: dotnet publish emailer.vbproj \
+           --configuration ${{ matrix.configuration }} \
+           --runtime ${{ matrix.runtime }} \
+           --output publish/${{ matrix.runtime }} \
+           --self-contained true
 
-    - name: List published files
+    - name: Copy default config & ini to artifact
       shell: bash
       run: |
-        if [ "${{ matrix.runtime }}" = "win-x64" ]; then
-          ls -la publish/${{ matrix.runtime }}/
-        else
-          ls -la publish/${{ matrix.runtime }}/
-        fi
+        cp emailer.config publish/${{ matrix.runtime }}/ 2>/dev/null || true
+        cp emailer.ini   publish/${{ matrix.runtime }}/ 2>/dev/null || true
+
+    - name: List published files
+      shell: ${{ matrix.runtime == 'win-x64' && 'pwsh' || 'bash' }}
+      run: |
+        if ("${{ matrix.runtime }}" -eq "win-x64") {
+          Get-ChildItem publish/${{ matrix.runtime }}
+        } else {
+          ls -la publish/${{ matrix.runtime }}
+        }
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: emailer-${{ matrix.runtime }}
-        path: publish/${{ matrix.runtime }}/
+        path: publish/${{ matrix.runtime }}
         retention-days: 7
 
   release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Download all artifacts
+    - name: Download artifacts
       uses: actions/download-artifact@v4
       with:
         path: artifacts
 
-    - name: Display structure of downloaded files
+    - name: Display structure
       run: ls -R artifacts
 
-    - name: Create Release
+    - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
