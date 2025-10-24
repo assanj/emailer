@@ -1,4 +1,4 @@
-name: Build Emailer
+name: Build Emailer 
 
 on:
   push:
