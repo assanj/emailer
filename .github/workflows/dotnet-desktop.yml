@@ -21,11 +21,10 @@ jobs:
         dotnet-version: 8.0.x
 
     - name: List project files
+      shell: bash
       run: |
         echo "=== Project Files ==="
-        dir *.vbproj /s /b
-        dir *.csproj /s /b
-        dir *.sln /s /b
+        find . -name "*.vbproj" -o -name "*.csproj" -o -name "*.sln" | sort
 
     - name: Restore dependencies
       run: dotnet restore "emailer.vbproj"
@@ -37,7 +36,8 @@ jobs:
       run: dotnet publish "emailer.vbproj" --configuration Release --runtime win-x64 --output publish/win-x64 --self-contained true
 
     - name: List published files
-      run: dir publish\win-x64
+      shell: bash
+      run: ls -la publish/win-x64/
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4

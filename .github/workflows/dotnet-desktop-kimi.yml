@@ -1,174 +1,94 @@
-Imports System
-Imports System.IO
-Imports System.Net
-Imports System.Net.Mail
-Imports System.Text
-Imports System.Runtime.InteropServices
-Imports System.Runtime.Versioning
+name: Build Emailer
 
-<Assembly: SupportedOSPlatform("windows")>
-<Assembly: SupportedOSPlatform("linux")>
-<Assembly: SupportedOSPlatform("osx")>
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
-Public Module Program
+jobs:
+  build:
+    strategy:
+      matrix:
+        configuration: [Release]
+        runtime: [win-x64, linux-x64, osx-x64]
 
-    <DllImport("kernel32.dll")>
-    Private Function GetConsoleWindow() As IntPtr
-    End Function
+    runs-on: ${{ matrix.runtime == 'win-x64' && 'windows-latest' || matrix.runtime == 'linux-x64' && 'ubuntu-latest' || 'macos-latest' }}
 
-    <DllImport("user32.dll")>
-    Private Function ShowWindow(hWnd As IntPtr, nCmdShow As Integer) As Boolean
-    End Function
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
 
-    Private Const SW_HIDE As Integer = 0
-    Private Const SW_SHOW As Integer = 5
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
 
-    Private isDebugMode As Boolean = False
-    Private ReadOnly isWindows As Boolean =
-        RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.vbproj') }}
+        restore-keys: ${{ runner.os }}-nuget-
 
-    ' =====  VS-compiled entry point  =====
-    Public Shared Sub Main()
-        Dim args As String() = Environment.GetCommandLineArgs()
+    - name: Restore
+      run: dotnet restore emailer.vbproj
 
-        If args.Length > 1 AndAlso
-           (args(1) = "/debug" OrElse args(1) = "-debug") Then
-            isDebugMode = True
-            ShowConsoleWindow()
-            Console.WriteLine("Debug mode ON")
-        ElseIf isWindows Then
-            HideConsoleWindow()
-        End If
+    - name: Build
+      run: dotnet build emailer.vbproj --configuration ${{ matrix.configuration }} --no-restore
 
-        Try
-            SendEmail()
-        Catch ex As Exception
-            LogError($"Critical: {ex.Message}")
-        End Try
+    - name: Publish (self-contained)
+      run: dotnet publish emailer.vbproj \
+           --configuration ${{ matrix.configuration }} \
+           --runtime ${{ matrix.runtime }} \
+           --output publish/${{ matrix.runtime }} \
+           --self-contained true
 
-        If isDebugMode Then
-            Console.WriteLine("Press any key to exit ...")
-            Console.ReadKey()
-        End If
-    End Sub
+    - name: Copy default config & ini to artifact
+      shell: bash
+      run: |
+        cp emailer.config publish/${{ matrix.runtime }}/ 2>/dev/null || true
+        cp emailer.ini   publish/${{ matrix.runtime }}/ 2>/dev/null || true
 
-    Private Shared Sub HideConsoleWindow()
-        If Not isWindows Then Return
-        Try
-            Dim hWnd As IntPtr = GetConsoleWindow()
-            If hWnd <> IntPtr.Zero Then ShowWindow(hWnd, SW_HIDE)
-        Catch ex As Exception
-            LogError($"Hide console: {ex.Message}")
-        End Try
-    End Sub
+    - name: List published files
+      shell: ${{ runner.os == 'Windows' && 'pwsh' || 'bash' }}
+      run: |
+        if ($env:RUNNER_OS -eq "Windows") {
+          Get-ChildItem publish/${{ matrix.runtime }}
+        } else {
+          ls -la publish/${{ matrix.runtime }}/
+        }
 
-    Private Shared Sub ShowConsoleWindow()
-        If Not isWindows Then Return
-        Try
-            Dim hWnd As IntPtr = GetConsoleWindow()
-            If hWnd <> IntPtr.Zero Then ShowWindow(hWnd, SW_SHOW)
-        Catch
-        End Try
-    End Sub
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: emailer-${{ matrix.runtime }}
+        path: publish/${{ matrix.runtime }}
+        retention-days: 7
 
-    Private Shared Sub SendEmail()
-        Dim s As Settings = ReadSettings()
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
 
-        Using smtp As New SmtpClient(s.SmtpServer, s.SmtpPort)
-            smtp.EnableSsl = s.EnableSSL
-            smtp.Credentials = New NetworkCredential(s.Username, s.Secret)
-            smtp.Timeout = 30000
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
 
-            Dim msg As New MailMessage(s.FromEmail, s.ToEmail,
-                                       s.Subject, CreateBody())
-            msg.SubjectEncoding = Encoding.UTF8
-            msg.BodyEncoding = Encoding.UTF8
-            msg.IsBodyHtml = False
+    - name: Display structure
+      run: ls -R artifacts
 
-            smtp.Send(msg)
-            LogMessage("Email sent")
-            If isDebugMode Then Console.WriteLine("Email sent")
-        End Using
-    End Sub
-
-    Private Class Settings
-        Public Property Secret As String
-        Public Property Subject As String = "Subject_demo"
-        Public Property Username As String = "user@domain.com"
-        Public Property SmtpServer As String = "mail.domain.com"
-        Public Property SmtpPort As Integer = 587
-        Public Property FromEmail As String = "account@domain.com"
-        Public Property ToEmail As String = "account@domain.com"
-        Public Property EnableSSL As Boolean = True
-    End Class
-
-    Private Shared Function ReadSettings() As Settings
-        Dim s As New Settings()
-        s.Secret = GetConfigValue("Secret", "")
-        s.Username = GetConfigValue("Username", "user@domain.com")
-        s.SmtpServer = GetConfigValue("SmtpServer", "mail.domain.com")
-        s.SmtpPort = Integer.Parse(GetConfigValue("SmtpPort", "587"))
-        s.FromEmail = GetConfigValue("FromEmail", "account@domain.com")
-        s.ToEmail = GetConfigValue("ToEmail", "account@domain.com")
-        s.EnableSSL = Boolean.Parse(GetConfigValue("EnableSSL", "True"))
-        s.Subject = If(File.Exists("emailer.ini"),
-                       File.ReadAllText("emailer.ini").Trim(),
-                       "Subject_demo")
-        If String.IsNullOrEmpty(s.Secret) Then
-            CreateDefaultConfig()
-            s.Secret = "yoursecret"
-        End If
-        Return s
-    End Function
-
-    Private Shared Sub CreateDefaultConfig()
-        File.WriteAllText("emailer.config",
-            "Secret=yoursecret" & vbCrLf &
-            "Username=user@domain.com" & vbCrLf &
-            "SmtpServer=mail.domain.com" & vbCrLf &
-            "SmtpPort=587" & vbCrLf &
-            "FromEmail=account@domain.com" & vbCrLf &
-            "ToEmail=account@domain.com" & vbCrLf &
-            "EnableSSL=True", Encoding.UTF8)
-    End Sub
-
-    Private Shared Function GetConfigValue(key As String, defaultVal As String) As String
-        If Not File.Exists("emailer.config") Then Return defaultVal
-        For Each line In File.ReadAllLines("emailer.config")
-            Dim parts = line.Split("="c, 2)
-            If parts.Length = 2 AndAlso parts(0).Trim() = key Then
-                Return parts(1).Trim()
-            End If
-        Next
-        Return defaultVal
-    End Function
-
-    Private Shared Function CreateBody() As String
-        Dim sb As New StringBuilder()
-        sb.AppendLine("Уведомление от Emailer")
-        sb.AppendLine($"Компьютер: {Environment.MachineName}")
-        sb.AppendLine($"Пользователь: {Environment.UserName}")
-        sb.AppendLine($"Время: {DateTime.Now:yyyy-MM-dd HH:mm:ss}")
-        sb.AppendLine($"ОС: {RuntimeInformation.OSDescription}")
-        Return sb.ToString()
-    End Function
-
-    Private Shared Sub LogMessage(msg As String)
-        Try
-            File.AppendAllText("emailer.log",
-                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {msg}{vbCrLf}",
-                Encoding.UTF8)
-        Catch
-        End Try
-    End Sub
-
-    Private Shared Sub LogError(msg As String)
-        Try
-            File.AppendAllText("emailer_error.log",
-                $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} - {msg}{vbCrLf}",
-                Encoding.UTF8)
-        Catch
-        End Try
-    End Sub
-
-End Module
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          artifacts/emailer-win-x64/**
+          artifacts/emailer-linux-x64/**
+          artifacts/emailer-osx-x64/**
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
