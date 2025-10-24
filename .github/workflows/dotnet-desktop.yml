@@ -13,11 +13,11 @@ jobs:
       matrix:
         configuration: [Release]
         runtime: [win-x64, linux-x64, osx-x64]
-
+    
     runs-on: ${{ matrix.runtime == 'win-x64' && 'windows-latest' || matrix.runtime == 'linux-x64' && 'ubuntu-latest' || 'macos-latest' }}
 
     steps:
-    - name: Checkout
+    - name: Checkout code
       uses: actions/checkout@v4
 
     - name: Setup .NET
@@ -25,63 +25,71 @@ jobs:
       with:
         dotnet-version: 8.0.x
 
-    - name: Cache NuGet packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.vbproj') }}
-        restore-keys: ${{ runner.os }}-nuget-
-
-    - name: Restore
-      run: dotnet restore emailer.vbproj
-
-    - name: Build
-      run: dotnet build emailer.vbproj --configuration ${{ matrix.configuration }} --no-restore
-
-    - name: Publish (self-contained)
-      run: dotnet publish emailer.vbproj \
-           --configuration ${{ matrix.configuration }} \
-           --runtime ${{ matrix.runtime }} \
-           --output publish/${{ matrix.runtime }} \
-           --self-contained true
-
-    - name: Copy default config & ini to artifact
+    - name: Find and verify project file
+      id: find_project
       shell: bash
       run: |
-        cp emailer.config publish/${{ matrix.runtime }}/ 2>/dev/null || true
-        cp emailer.ini   publish/${{ matrix.runtime }}/ 2>/dev/null || true
+        echo "=== Searching for project files ==="
+        find . -name "*.vbproj" -o -name "*.csproj" -o -name "*.sln" | while read file; do
+          echo "Found: $file"
+        done
+        
+        # Find the first VB project file
+        PROJECT_FILE=$(find . -name "*.vbproj" | head -1)
+        if [ -z "$PROJECT_FILE" ]; then
+          echo "No VB project file found, looking for any project file..."
+          PROJECT_FILE=$(find . -name "*.csproj" | head -1)
+        fi
+        
+        if [ -z "$PROJECT_FILE" ]; then
+          echo "ERROR: No project file found!"
+          exit 1
+        fi
+        
+        echo "Using project file: $PROJECT_FILE"
+        echo "PROJECT_FILE=$PROJECT_FILE" >> $GITHUB_OUTPUT
+
+    - name: List project structure
+      shell: bash
+      run: |
+        echo "=== Repository structure ==="
+        find . -type f -name "*.vb" -o -name "*.cs" -o -name "*.vbproj" -o -name "*.csproj" -o -name "*.sln" | sort
+
+    - name: Restore dependencies
+      run: dotnet restore "${{ steps.find_project.outputs.PROJECT_FILE }}"
+
+    - name: Build
+      run: dotnet build "${{ steps.find_project.outputs.PROJECT_FILE }}" --configuration ${{ matrix.configuration }} --no-restore
+
+    - name: Publish
+      run: dotnet publish "${{ steps.find_project.outputs.PROJECT_FILE }}" --configuration ${{ matrix.configuration }} --runtime ${{ matrix.runtime }} --output publish/${{ matrix.runtime }} --self-contained true
 
     - name: List published files
-      shell: ${{ matrix.runtime == 'win-x64' && 'pwsh' || 'bash' }}
-      run: |
-        if ("${{ matrix.runtime }}" -eq "win-x64") {
-          Get-ChildItem publish/${{ matrix.runtime }}
-        } else {
-          ls -la publish/${{ matrix.runtime }}
-        }
+      shell: bash
+      run: ls -la publish/${{ matrix.runtime }}/
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: emailer-${{ matrix.runtime }}
-        path: publish/${{ matrix.runtime }}
+        path: publish/${{ matrix.runtime }}/
         retention-days: 7
 
   release:
     needs: build
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
-
+    
     steps:
-    - name: Download artifacts
+    - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
         path: artifacts
 
-    - name: Display structure
+    - name: Display structure of downloaded files
       run: ls -R artifacts
 
-    - name: Create GitHub Release
+    - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
