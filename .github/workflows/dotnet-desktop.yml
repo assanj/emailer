@@ -35,3 +35,25 @@ jobs:
         name: emailer-windows
         path: publish/
         retention-days: 30
+
+  release:
+    needs: build
+    if: ${{ success() }}
+    runs-on: windows-latest
+    
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: emailer-windows
+        path: release-files
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: release-files/**/*
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
