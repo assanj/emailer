@@ -23,7 +23,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: 8.0.x  # Явно указываем .NET 8 вместо 9
+        dotnet-version: 8.0.x
 
     - name: List project files
       run: |
@@ -33,14 +33,6 @@ jobs:
           dir *.sln /s
         else
           find . -name "*.vbproj" -o -name "*.csproj" -o -name "*.sln"
-        fi
-
-    - name: Clean legacy files
-      run: |
-        if [ "${{ matrix.runtime }}" = "win-x64" ]; then
-          Remove-Item -Force -ErrorAction SilentlyContinue *.Designer.vb, AssemblyInfo.vb
-        else
-          find . -name "*.Designer.vb" -delete -o -name "AssemblyInfo.vb" -delete
         fi
 
     - name: Restore dependencies for VB project
@@ -89,6 +81,6 @@ jobs:
           artifacts/emailer-linux-x64/**
           artifacts/emailer-osx-x64/**
         draft: false
-        prereview: false
+        prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
