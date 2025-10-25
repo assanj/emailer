@@ -1,7 +1,4 @@
-# Emailer - SMTP Email Sending Utility
-
-## OPEN SOURCE & CROSS-PLATFORM
-**Full source code available:** https://github.com/assanj/emailer
+# Emailer - SMTP Email Sending Utility (CROSS-PLATFORM)
 
 ## QUICK START
 1. Create configuration: `emailer --reset-config`
