@@ -1,14 +1,13 @@
 # Emailer - SMTP Email Sender Utility 
 Plz see [promt.md](promt.md), thanx a lot to  <a href="https://chat.deepseek.com" target="_blank" ><img src="https://upload.wikimedia.org/wikipedia/commons/e/ec/DeepSeek_logo.svg" alt="DeepSeek" height="20"></a>  for opensorce & cross-platform
 
-
 ## Release was signed with GitHub’s verified signature [![Latest Release](https://img.shields.io/github/v/release/assanj/emailer?style=for-the-badge&label=Версия)](https://github.com/assanj/emailer/releases/latest)
 
 [![Linux Download](https://img.shields.io/badge/Linux-Download-orange?style=for-the-badge&logo=linux)](https://github.com/assanj/emailer/releases/latest)
 [![Windows Download](https://img.shields.io/badge/Windows-Download-blue?style=for-the-badge&logo=windows)](https://github.com/assanj/emailer/releases/latest)
 [![macOS Download](https://img.shields.io/badge/macOS-Download-silver?style=for-the-badge&logo=apple)](https://github.com/assanj/emailer/releases/latest)
 
-## QUICK START FOR Debian/Windows/MacOs:
+## QUICK START FOR Debian/Linux/Windows/MacOs:
 1. Edit emailer.ini with your SMTP settings and from the same directory: `emailer --subject "Test" --body "Hello from Emailer"`
 2. OR easy: `emailer --server smtp.gmail.ru --port 587 --username myuser --password mypass --from sender@gmail.ru --to recipient@domain.ru --ssl true --debug`
 
