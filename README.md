@@ -8,7 +8,7 @@ Plz see [promt.md](promt.md), thanx a lot to  <a href="https://chat.deepseek.com
 [![macOS Download](https://img.shields.io/badge/macOS-Download-silver?style=for-the-badge&logo=apple)](https://github.com/assanj/emailer/releases/latest)
 
 ## QUICK START
-1. Edit emailer.ini with your SMTP settings and send: `emailer --subject "Test" --body "Hello from Emailer"`
+1. Edit emailer.ini with your SMTP settings and from the same directory: `emailer --subject "Test" --body "Hello from Emailer"`
 2. OR `emailer --server smtp.gmail.com --port 587 --username myuser --password mypass --from sender@gmail.com --to recipient@domain.com --ssl true`
 
 ## COMMAND LINE PARAMETERS
