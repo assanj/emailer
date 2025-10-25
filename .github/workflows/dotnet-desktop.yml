@@ -1,112 +1,68 @@
-name: .NET Desktop Build and Test
+name: .NET Desktop
 
 on:
   push:
-    branches: [ main, master ]
-    tags: [ 'v*' ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
-
-env:
-  DOTNET_VERSION: '8.0.x'
-  CONFIGURATION: 'Release'
-
-permissions:
-  contents: write
+    branches: [ main ]
 
 jobs:
   build:
-    name: Build and Test
-    runs-on: windows-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Restore dependencies
-      run: dotnet restore
-      
-    - name: Build
-      run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
-      
-    - name: Test
-      run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal
-      
-    - name: Publish
-      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --no-build --output ./publish
-      
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: emailer-app
-        path: ./publish/
-        
-  cross-platform-build:
-    name: Cross-Platform Build
-    runs-on: ${{ matrix.os }}
+
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-        
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Build
-      run: dotnet build --configuration ${{ env.CONFIGURATION }}
-      
-    - name: Basic Functionality Test
-      shell: bash
-      run: |
-        echo "Running basic functionality tests on $RUNNER_OS"
-        dotnet test --verbosity normal
+        configuration: [Debug, Release]
 
-  release:
-    name: Create Release
     runs-on: windows-latest
-    needs: [build, cross-platform-build]
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
-    
+
     steps:
-    - name: Checkout code
+    - name: Checkout
       uses: actions/checkout@v4
-      
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Publish Release
-      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --output ./publish
-      
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
+        fetch-depth: 0
+
+    - name: Install .NET
+      uses: actions/setup-dotnet@v4
       with:
-        tag_name: ${{ github.ref_name }}
-        name: Emailer ${{ github.ref_name }}
-        body: |
-          Emailer - SMTP Email Sending Utility
-          
-          Features:
-          - SMTP email sending with SSL/TLS
-          - Cross-platform support (Windows/Linux/macOS)
-          - File attachment support
-          - Password encryption
-          - Comprehensive logging
-          
-          See README.md for full documentation.
-        files: ./publish/**
-        draft: false
-        prerelease: false
+        dotnet-version: 8.0.x
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Setup NuGet
+      uses: NuGet/setup-nuget@v1
+
+    - name: Restore NuGet packages
+      run: nuget restore
+
+    - name: Build
+      run: msbuild -p:Configuration=${{ matrix.configuration }} -p:Platform="x86" -restore
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: Emailer-${{ matrix.configuration }}
+        path: ${{ github.workspace }}/**/bin/${{ matrix.configuration }}/**/*
+        retention-days: 7
+
+    # Новый шаг: создание ZIP-архива для Release сборки
+    - name: Create Release ZIP Archive
+      if: matrix.configuration == 'Release'
+      run: |
+        $releaseDir = Get-ChildItem -Path . -Recurse -Directory | Where-Object { $_.FullName -like "*\bin\Release\*" -and $_.FullName -notlike "*\obj\*" } | Select-Object -First 1
+        if ($releaseDir) {
+          $zipPath = "Emailer-Release-${{ github.sha }}.zip"
+          Compress-Archive -Path "$($releaseDir.FullName)\*" -DestinationPath $zipPath -Force
+          Write-Host "Created ZIP archive: $zipPath"
+        } else {
+          Write-Error "Release directory not found"
+          exit 1
+        }
+
+    - name: Upload Release ZIP Artifact
+      if: matrix.configuration == 'Release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: Emailer-Release-ZIP
+        path: Emailer-Release-${{ github.sha }}.zip
+        retention-days: 30
