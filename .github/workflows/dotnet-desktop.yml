@@ -54,12 +54,18 @@ jobs:
         name: emailer-app
         path: ./publish/
         
-    - name: Create ZIP archive
+    - name: Create ZIP archive with emailer folder
       run: |
         $publishDir = "./publish"
         if (Test-Path $publishDir) {
-          Compress-Archive -Path "$publishDir/*" -DestinationPath "Emailer-${{ github.sha }}.zip" -Force
-          echo "ZIP archive created successfully"
+          # Создаем временную папку с emailer
+          New-Item -ItemType Directory -Path "./emailer-temp" -Force
+          Copy-Item -Path "$publishDir/*" -Destination "./emailer-temp/" -Recurse
+          
+          # Создаем ZIP с папкой emailer
+          Compress-Archive -Path "./emailer-temp/*" -DestinationPath "Emailer-${{ github.sha }}.zip" -Force
+          Remove-Item -Path "./emailer-temp" -Recurse -Force
+          echo "ZIP archive with emailer folder created successfully"
         } else {
           echo "Publish directory not found"
           exit 1
@@ -195,11 +201,18 @@ jobs:
         echo "Checking INI file for macOS build:"
         find ./publish-macos -name "*.ini"
         
-    - name: Create macOS ZIP package
+    - name: Create macOS ZIP package with emailer folder
       run: |
-        cd publish-macos
-        zip -r ../Emailer-macOS-${{ github.ref_name }}.zip .
-        echo "macOS ZIP package created"
+        # Создаем папку emailer и копируем файлы
+        mkdir -p emailer
+        cp -r publish-macos/* emailer/
+        
+        # Создаем ZIP с папкой emailer
+        zip -r Emailer-macOS-${{ github.ref_name }}.zip emailer/
+        
+        # Удаляем временную папку
+        rm -rf emailer
+        echo "macOS ZIP package with emailer folder created"
         
     - name: Upload macOS artifacts
       uses: actions/upload-artifact@v4
@@ -243,12 +256,18 @@ jobs:
     - name: Publish Release
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --output ./publish
       
-    - name: Create Release ZIP
+    - name: Create Release ZIP with emailer folder
       run: |
         $publishDir = "./publish"
         if (Test-Path $publishDir) {
-          Compress-Archive -Path "$publishDir/*" -DestinationPath "Emailer-Windows-${{ github.ref_name }}.zip" -Force
-          echo "Release ZIP archive created successfully"
+          # Создаем временную папку с emailer
+          New-Item -ItemType Directory -Path "./emailer" -Force
+          Copy-Item -Path "$publishDir/*" -Destination "./emailer/" -Recurse
+          
+          # Создаем ZIP с папкой emailer
+          Compress-Archive -Path "./emailer/*" -DestinationPath "Emailer-Windows-${{ github.ref_name }}.zip" -Force
+          Remove-Item -Path "./emailer" -Recurse -Force
+          echo "Release ZIP archive with emailer folder created successfully"
         } else {
           echo "Publish directory not found"
           exit 1
@@ -275,8 +294,11 @@ jobs:
           - `emailer_*.deb` - DEB package for Linux (Ubuntu/Debian)
           - `Emailer-macOS-*.zip` - Portable macOS version
           
+          **Installation:**
+          All ZIP archives contain files in `emailer/` folder for easy organization.
+          
           **Configuration:**
-          Edit `config.ini` file to configure SMTP settings and defaults.
+          Edit `emailer/config.ini` file to configure SMTP settings and defaults.
           
           See README.md for full documentation.
         files: |
