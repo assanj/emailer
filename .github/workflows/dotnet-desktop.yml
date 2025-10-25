@@ -63,7 +63,9 @@ jobs:
           Copy-Item -Path "$publishDir/*" -Destination "./emailer/" -Recurse
           
           # Создаем ZIP с папкой emailer внутри (имя архива с тегом)
-          Compress-Archive -Path "./emailer/" -DestinationPath "emailer-windows-${{ github.ref_name }}.zip" -Force
+          $tagName = "${{ github.ref_name }}"
+          if ($tagName -eq "") { $tagName = "latest" }
+          Compress-Archive -Path "./emailer/" -DestinationPath "emailer-windows-$tagName.zip" -Force
           Remove-Item -Path "./emailer" -Recurse -Force
           echo "ZIP archive with emailer folder created successfully"
         } else {
@@ -75,7 +77,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: emailer-zip
-        path: emailer-windows-${{ github.ref_name }}.zip
+        path: emailer-windows-*.zip
         retention-days: 30
         
   cross-platform-build:
@@ -102,11 +104,11 @@ jobs:
       run: |
         echo "Running basic functionality tests on $RUNNER_OS"
         dotnet test --verbosity normal
-        
-  # ДОБАВЛЕНО: Linux RPM пакет для Red Hat-based систем
+
   linux-rpm-package:
     name: Create RPM Package
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
     - name: Checkout code
@@ -130,48 +132,58 @@ jobs:
         
     - name: Create RPM package structure
       run: |
-        mkdir -p rpm-package/usr/local/bin/emailer
-        mkdir -p rpm-package/usr/bin
-        mkdir -p rpm-package/usr/share/applications
+        mkdir -p rpm-build/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
+        
+        # Копируем spec файл
+        cp emailer.spec rpm-build/SPECS/
+        
+        # Создаем структуру пакета
+        mkdir -p rpm-build/BUILD/usr/bin
+        mkdir -p rpm-build/BUILD/usr/share/emailer
+        mkdir -p rpm-build/BUILD/usr/share/applications
         
         # Копируем опубликованные файлы
-        cp -r publish-linux/* rpm-package/usr/local/bin/emailer/
+        cp -r publish-linux/* rpm-build/BUILD/usr/share/emailer/
         
         # Создаем скрипт для запуска
-        cat > rpm-package/usr/bin/emailer << EOF
+        cat > rpm-build/BUILD/usr/bin/emailer << EOF
         #!/bin/bash
-        exec /usr/local/bin/emailer/emailer "\$@"
+        exec /usr/share/emailer/emailer "\$@"
         EOF
-        chmod +x rpm-package/usr/bin/emailer
+        chmod +x rpm-build/BUILD/usr/bin/emailer
         
         # Создаем desktop файл
-        cat > rpm-package/usr/share/applications/emailer.desktop << EOF
+        cat > rpm-build/BUILD/usr/share/applications/emailer.desktop << EOF
         [Desktop Entry]
         Name=Emailer
         Comment=SMTP Email Sending Utility
-        Exec=/usr/bin/emailer
+        Exec=emailer
         Icon=emailer
-        Terminal=false
+        Terminal=true
         Type=Application
         Categories=Network;Email;
         EOF
         
     - name: Build RPM package
       run: |
-        cd rpm-package
-        rpmbuild -bb --define "_topdir $(pwd)" --buildroot $(pwd) ../emailer.spec
-        echo "RPM package built successfully"
+        cd rpm-build
+        rpmbuild -bb \
+          --define "_topdir $(pwd)" \
+          --define "_version 1.0.0" \
+          --define "_release ${{ github.run_number }}" \
+          SPECS/emailer.spec
         
     - name: Upload RPM artifact
       uses: actions/upload-artifact@v4
       with:
         name: emailer-rpm-package
-        path: rpm-package/RPMS/*/emailer-*.rpm
+        path: rpm-build/RPMS/*/emailer-*.rpm
         retention-days: 30
         
   linux-deb-package:
     name: Create DEB Package
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
     - name: Checkout code
@@ -186,12 +198,14 @@ jobs:
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
         
     - name: Publish for Linux
-      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true --output ./publish-linux
+      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-linux
         
     - name: Verify INI file for Linux
       run: |
         echo "Checking INI file for Linux build:"
         find ./publish-linux -name "*.ini"
+        echo "Files in publish directory:"
+        ls -la ./publish-linux/
         
     - name: Install dpkg tools
       run: |
@@ -228,7 +242,7 @@ jobs:
         EOF
         chmod +x deb-package/usr/bin/emailer
         
-        # Создаем desktop файл
+        # Создаем desktop файл (опционально)
         cat > deb-package/usr/share/applications/emailer.desktop << EOF
         [Desktop Entry]
         Name=Emailer
@@ -254,10 +268,10 @@ jobs:
         path: emailer_*.deb
         retention-days: 30
         
-  # ДОБАВЛЕНО: Linux AppImage (универсальный бинарник)
   linux-appimage:
     name: Create AppImage
     runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
     - name: Checkout code
@@ -272,41 +286,38 @@ jobs:
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
         
     - name: Publish for Linux AppImage
-      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true --output ./AppDir/usr/bin
+      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./AppDir
         
-    - name: Download linuxdeploy
+    - name: Create simple AppImage structure
       run: |
-        wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
-        chmod +x linuxdeploy-x86_64.AppImage
-        
-    - name: Create AppImage structure
-      run: |
-        mkdir -p AppDir/usr/share/applications
-        mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+        # Создаем простой скрипт запуска
+        cat > AppDir/AppRun << 'EOF'
+        #!/bin/bash
+        HERE="$(dirname "$(readlink -f "${0}")")"
+        exec "${HERE}/emailer" "$@"
+        EOF
+        chmod +x AppDir/AppRun
         
         # Создаем desktop файл
-        cat > AppDir/usr/share/applications/emailer.desktop << EOF
+        cat > AppDir/emailer.desktop << EOF
         [Desktop Entry]
         Name=Emailer
         Comment=SMTP Email Sending Utility
         Exec=emailer
         Icon=emailer
-        Terminal=false
+        Terminal=true
         Type=Application
         Categories=Network;Email;
         EOF
         
-        # Создаем скрипт запуска
-        cat > AppDir/AppRun << EOF
-        #!/bin/bash
-        exec "\$APPDIR/usr/bin/emailer" "\$@"
-        EOF
-        chmod +x AppDir/AppRun
-        
-    - name: Build AppImage
+    - name: Create simple AppImage using appimagetool
       run: |
-        ./linuxdeploy-x86_64.AppImage --appdir AppDir --output appimage
-        echo "AppImage built successfully"
+        # Скачиваем appimagetool
+        wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+        chmod +x appimagetool-x86_64.AppImage
+        
+        # Создаем AppImage
+        ./appimagetool-x86_64.AppImage AppDir emailer-${{ github.ref_name }}-x86_64.AppImage
         
     - name: Upload AppImage artifact
       uses: actions/upload-artifact@v4
@@ -318,6 +329,7 @@ jobs:
   macos-packages:
     name: Create macOS Packages
     runs-on: macos-latest
+    if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
     - name: Checkout code
@@ -332,7 +344,7 @@ jobs:
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
         
     - name: Publish for macOS
-      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime osx-arm64 --self-contained true --output ./publish-macos
+      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime osx-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-macos
         
     - name: Verify INI file for macOS
       run: |
@@ -352,69 +364,17 @@ jobs:
         rm -rf emailer
         echo "macOS ZIP package with emailer folder created"
         
-    - name: Create macOS DMG package
-      run: |
-        # Создаем структуру для DMG
-        mkdir -p dmg-package/.background
-        cp -r publish-macos/* dmg-package/
-        
-        # Создаем DMG (требуется create-dmg)
-        brew install create-dmg
-        create-dmg \
-          --volname "Emailer ${{ github.ref_name }}" \
-          --window-pos 200 120 \
-          --window-size 800 400 \
-          --icon-size 100 \
-          --icon "emailer" 200 190 \
-          --hide-extension "emailer" \
-          --app-drop-link 600 185 \
-          "emailer-macos-${{ github.ref_name }}.dmg" \
-          "dmg-package/"
-        
     - name: Upload macOS artifacts
       uses: actions/upload-artifact@v4
       with:
         name: emailer-macos-packages
-        path: |
-          emailer-macos-${{ github.ref_name }}.zip
-          emailer-macos-${{ github.ref_name }}.dmg
-        retention-days: 30
-        
-  # ДОБАВЛЕНО: Windows MSI installer
-  windows-installer:
-    name: Create Windows Installer
-    runs-on: windows-latest
-    needs: build
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: emailer-app
-        path: ./publish
-        
-    - name: Create MSI installer
-      run: |
-        # Используем WiX Toolset для создания MSI
-        $version = "${{ github.ref_name }}" -replace 'v', ''
-        heat dir ./publish -cg MainComponent -gg -scom -sreg -sfrag -srd -dr INSTALLFOLDER -var var.SourceDir -out fragments.wxs
-        candle -dSourceDir=./publish -dVersion=$version fragments.wxs
-        light -ext WixUIExtension -out emailer-${{ github.ref_name }}.msi fragments.wixobj
-        
-    - name: Upload MSI artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: emailer-msi-installer
-        path: emailer-*.msi
+        path: emailer-macos-*.zip
         retention-days: 30
         
   release:
     name: Create Release
-    runs-on: windows-latest
-    needs: [build, cross-platform-build, linux-deb-package, linux-rpm-package, linux-appimage, macos-packages, windows-installer]
+    runs-on: ubuntu-latest
+    needs: [build, cross-platform-build, linux-deb-package, linux-rpm-package, linux-appimage, macos-packages]
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
@@ -426,8 +386,12 @@ jobs:
     - name: Download all artifacts
       run: |
         mkdir -p release-artifacts
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Download Windows ZIP
+      uses: actions/download-artifact@v4
+      with:
+        name: emailer-zip
+        path: ./release-artifacts
         
     - name: Download DEB package
       uses: actions/download-artifact@v4
@@ -452,12 +416,6 @@ jobs:
       with:
         name: emailer-macos-packages
         path: ./release-artifacts
-        
-    - name: Download Windows installer
-      uses: actions/download-artifact@v4
-      with:
-        name: emailer-msi-installer
-        path: ./release-artifacts
       
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
@@ -467,26 +425,6 @@ jobs:
     - name: Build Release version
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
         
-    - name: Publish Release
-      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --output ./publish
-      
-    - name: Create Release ZIP with emailer folder
-      run: |
-        $publishDir = "./publish"
-        if (Test-Path $publishDir) {
-          # Создаем папку emailer и копируем файлы
-          New-Item -ItemType Directory -Path "./emailer" -Force
-          Copy-Item -Path "$publishDir/*" -Destination "./emailer/" -Recurse
-          
-          # Создаем ZIP с папкой emailer внутри (имя архива с тегом)
-          Compress-Archive -Path "./emailer/" -DestinationPath "emailer-windows-${{ github.ref_name }}.zip" -Force
-          Remove-Item -Path "./emailer" -Recurse -Force
-          echo "Release ZIP archive with emailer folder created successfully"
-        } else {
-          echo "Publish directory not found"
-          exit 1
-        }
-      
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
@@ -507,33 +445,31 @@ jobs:
           
           ### Windows
           - `emailer-windows-${{ github.ref_name }}.zip` - Portable version (x64)
-          - `emailer-${{ github.ref_name }}.msi` - Windows Installer
           
           ### Linux
           - `emailer_*.deb` - DEB package (Ubuntu/Debian, amd64)
-          - `emailer-*.rpm` - RPM package (Fedora/Red Hat, amd64)
+          - `emailer-*.rpm` - RPM package (Fedora/RHEL/CentOS, x86_64)
           - `emailer-*.AppImage` - Universal AppImage (all distributions)
           
           ### macOS
-          - `emailer-macos-${{ github.ref_name }}.zip` - Portable version (ARM64)
-          - `emailer-macos-${{ github.ref_name }}.dmg` - Disk Image installer
+          - `emailer-macos-${{ github.ref_name }}.zip` - Portable version (x64)
           
           **Installation:**
-          - **Windows**: Run MSI installer or extract ZIP and run `emailer.exe`
-          - **Linux**: Use your distribution's package manager or run AppImage
-          - **macOS**: Mount DMG or extract ZIP and run `emailer`
+          - **Windows**: Extract ZIP and run `emailer.exe`
+          - **Linux DEB**: `sudo dpkg -i emailer_*.deb`
+          - **Linux RPM**: `sudo rpm -i emailer-*.rpm` 
+          - **Linux AppImage**: `chmod +x emailer-*.AppImage && ./emailer-*.AppImage`
+          - **macOS**: Extract ZIP and run `emailer`
           
           **Configuration:**
-          Edit `emailer/config.ini` file to configure SMTP settings and defaults.
+          Edit `config.ini` file to configure SMTP settings and defaults.
           
           See README.md for full documentation.
         files: |
-          ./emailer-windows-${{ github.ref_name }}.zip
-          ./emailer-*.msi
+          ./release-artifacts/emailer-windows-*.zip
           ./release-artifacts/emailer_*.deb
           ./release-artifacts/emailer-*.rpm
           ./release-artifacts/emailer-*.AppImage
           ./release-artifacts/emailer-macos-*.zip
-          ./release-artifacts/emailer-macos-*.dmg
         draft: false
-        prerease: false
+        prerelease: false
