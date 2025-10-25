@@ -1,12 +1,12 @@
 # Emailer - SMTP Email Sending Utility (CROSS-PLATFORM)
 
-## 📦 Download Lastest Release 
+## 📦 Download Lastest Release [![Latest Release](https://img.shields.io/github/v/release/assanj/emailer?style=for-the-badge&label=Версия)](https://github.com/assanj/emailer/releases/latest)
 
 [![Windows Download](https://img.shields.io/badge/Windows-Download-blue?style=for-the-badge&logo=windows)](https://github.com/assanj/emailer/releases/latest/download/Emailer-Windows-*.zip)
 [![Linux Download](https://img.shields.io/badge/Linux-Download-orange?style=for-the-badge&logo=linux)](https://github.com/assanj/emailer/releases/latest/download/emailer_*_amd64.deb)
 [![macOS Download](https://img.shields.io/badge/macOS-Download-silver?style=for-the-badge&logo=apple)](https://github.com/assanj/emailer/releases/latest/download/Emailer-macOS-*.zip)
 
-[![Latest Release](https://img.shields.io/github/v/release/assanj/emailer?style=for-the-badge&label=Версия)](https://github.com/assanj/emailer/releases/latest)
+
 
 ## QUICK START
 1. Edit emailer.ini with your SMTP settings
