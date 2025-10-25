@@ -10,7 +10,7 @@ Plz see [promt.md](promt.md), thanx a lot to  <a href="https://chat.deepseek.com
 
 ## QUICK START FOR Linux/Windows/MacOs:
 1. Edit emailer.ini with your SMTP settings and from the same directory: `emailer --subject "Test" --body "Hello from Emailer"`
-2. OR: `emailer --server smtp.gmail.com --port 587 --username myuser --password mypass --from sender@gmail.com --to recipient@domain.com --ssl true --debug`
+2. OR easy: `emailer --server smtp.gmail.com --port 587 --username myuser --password mypass --from sender@gmail.com --to recipient@domain.com --ssl true --debug`
 
 ## COMMAND LINE PARAMETERS
 
