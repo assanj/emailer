@@ -102,10 +102,16 @@ namespace emailer
             string helpText = @"
 SMTP Email Sending Utility (OPEN SOURCE & CROSS-PLATFORM)
 Full code available for inspection: https://github.com/assanj/emailer.git
-
 USAGE:
   emailer [OPTIONS]
-
+SMTP PARAMETERS (override INI file):
+  --server HOST     SMTP server address
+  --port NUMBER     SMTP server port
+  --username USER   SMTP username  
+  --password PASS   SMTP password
+  --from EMAIL      From email address
+  --to EMAIL        To email address (comma-separated for multiple)
+  --ssl true|false  Enable SSL
 OPTIONS:
   --debug           Enable debug mode with console output
   --subject TEXT    Email subject text
@@ -115,27 +121,15 @@ OPTIONS:
   --cc EMAILS       Carbon copy (comma-separated emails)
   --bcc EMAILS      Blind carbon copy (comma-separated emails)
   --importance LEVEL Set importance (high/normal/low)
-
-SMTP PARAMETERS (override INI file):
-  --server HOST     SMTP server address
-  --port NUMBER     SMTP server port
-  --username USER   SMTP username  
-  --password PASS   SMTP password
-  --from EMAIL      From email address
-  --to EMAIL        To email address (comma-separated for multiple)
-  --ssl true|false  Enable SSL
-
 UTILITIES:
-  --encrypt-password PASS  Encrypt password for INI file
-  --reset-config    Reset configuration files
   --help, -h, /?   Show this help
-
+  --encrypt-password PASS  Encrypt password for INI file
+  --reset-config    Reset configuration files  
 TEMPLATE VARIABLES:
   {host} {user} {timestamp} {time} {date}
-
 EXAMPLES:
   emailer --debug --subject ""Alert from {host}"" --body ""User {user} at {timestamp}""
-  emailer --server smtp.domain.com --port 587 --username user --password pass --from a@b.com --to c@d.com --ssl true
+  emailer --server smtp.domain.ru --port 587 --username user --password pass --from sender@domain.ru --to recipient@domain.ru --ssl true
   emailer --attach emailer.log --subject ""Log file from {host}"" --body ""Generated at {timestamp}""
   emailer --to ""user1@domain.com,user2@domain.com"" --cc ""manager@domain.com"" --bcc ""archive@domain.com"" --importance high
   emailer --no-sound --debug
