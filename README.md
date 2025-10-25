@@ -139,6 +139,4 @@ Use `--debug` flag for detailed operation information and error tracing.
 - ASCII-only output for maximum compatibility
 - Self-contained executable, no external dependencies
 
-## SUPPORT
-For issues, feature requests, and contributions:
-**Repository:** https://github.com/assanj/emailer
+
