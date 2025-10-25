@@ -325,7 +325,7 @@ jobs:
         path: emailer-macos-*.zip
         retention-days: 30
         
-  release:
+    release:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [build, cross-platform-build, linux-deb-package, linux-rpm-package, linux-portable, macos-packages]
@@ -408,15 +408,71 @@ jobs:
           ### macOS
           - `emailer-macos-${{ github.ref_name }}.zip` - Portable version (x64)
           
-          **Installation:**
-          - **Windows**: Extract ZIP and run `emailer.exe`
-          - **Linux DEB**: `sudo dpkg -i emailer_1.0.0-${{ github.run_number }}_amd64.deb`
-          - **Linux RPM**: `sudo rpm -i emailer-1.0.0-${{ github.run_number }}.x86_64.rpm`
-          - **Linux Portable**: Extract ZIP and run `./emailer`
-          - **macOS**: Extract ZIP and run `./emailer`
+          **Quick Install (Linux):**
+          
+          **Ubuntu/Debian:**
+          ```bash
+          # Download and install DEB package
+          wget https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer_1.0.0-${{ github.run_number }}_amd64.deb
+          sudo dpkg -i emailer_1.0.0-${{ github.run_number }}_amd64.deb
+          
+          # Or using curl
+          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer_1.0.0-${{ github.run_number }}_amd64.deb
+          sudo dpkg -i emailer_1.0.0-${{ github.run_number }}_amd64.deb
+          ```
+          
+          **Fedora/RHEL/CentOS:**
+          ```bash
+          # Download and install RPM package
+          wget https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
+          sudo rpm -i emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
+          
+          # Or using curl
+          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
+          sudo rpm -i emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
+          ```
+          
+          **Portable Linux (any distribution):**
+          ```bash
+          # Download and extract portable version
+          wget https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-linux-${{ github.ref_name }}.zip
+          unzip emailer-linux-${{ github.ref_name }}.zip
+          cd emailer
+          ./emailer
+          
+          # Or using curl
+          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-linux-${{ github.ref_name }}.zip
+          unzip emailer-linux-${{ github.ref_name }}.zip
+          cd emailer
+          ./emailer
+          ```
+          
+          **Windows:**
+          ```powershell
+          # Download and extract
+          Invoke-WebRequest -Uri "https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-windows-${{ github.ref_name }}.zip" -OutFile "emailer-windows-${{ github.ref_name }}.zip"
+          Expand-Archive -Path "emailer-windows-${{ github.ref_name }}.zip" -DestinationPath "."
+          cd emailer
+          .\emailer.exe
+          ```
+          
+          **macOS:**
+          ```bash
+          # Download and extract
+          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-macos-${{ github.ref_name }}.zip
+          unzip emailer-macos-${{ github.ref_name }}.zip
+          cd emailer
+          ./emailer
+          ```
+          
+          **One-liner installation (Linux DEB):**
+          ```bash
+          # Download and install in one command
+          wget -qO- https://github.com/assanj/emailer/releases/latest/download/emailer_*-amd64.deb | sudo dpkg -i -
+          ```
           
           **Configuration:**
-          Edit `config.ini` file to configure SMTP settings and defaults.
+          After installation, edit `config.ini` file to configure SMTP settings and defaults.
           
           See README.md for full documentation.
         files: |
