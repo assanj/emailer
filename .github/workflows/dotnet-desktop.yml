@@ -3,6 +3,7 @@ name: .NET Desktop Build and Test
 on:
   push:
     branches: [ main, master ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main, master ]
 
@@ -97,21 +98,26 @@ jobs:
     name: Create Release
     runs-on: windows-latest
     needs: [build, cross-platform-build, security-scan]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: startsWith(github.ref, 'refs/tags/v')
     
     steps:
-    - name: Download artifacts
-      uses: actions/download-artifact@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
       with:
-        name: emailer-app
+        dotnet-version: ${{ env.DOTNET_VERSION }}
         
+    - name: Publish Release
+      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --output ./publish
+      
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        files: |
-          *.exe
-          *.dll
-          *.config
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        files: ./publish/*
         body: |
           Emailer - SMTP Email Sending Utility
           
