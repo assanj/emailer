@@ -325,7 +325,7 @@ jobs:
         path: emailer-macos-*.zip
         retention-days: 30
         
-    release:
+  release:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [build, cross-platform-build, linux-deb-package, linux-rpm-package, linux-portable, macos-packages]
@@ -467,14 +467,38 @@ jobs:
           
           **One-liner installation (Linux DEB):**
           ```bash
-          # Download and install in one command
-          wget -qO- https://github.com/assanj/emailer/releases/latest/download/emailer_*-amd64.deb | sudo dpkg -i -
+          # Download and install in one command (requires root)
+          wget -q https://github.com/assanj/emailer/releases/latest/download/emailer_*_amd64.deb -O emailer.deb && sudo dpkg -i emailer.deb
+          ```
+          
+          **One-liner installation (Linux RPM):**
+          ```bash
+          # Download and install in one command (requires root)
+          wget -q https://github.com/assanj/emailer/releases/latest/download/emailer-*.x86_64.rpm -O emailer.rpm && sudo rpm -i emailer.rpm
+          ```
+          
+          **One-liner portable (Linux):**
+          ```bash
+          # Download, extract and run in one command
+          wget -q https://github.com/assanj/emailer/releases/latest/download/emailer-linux-*.zip -O emailer.zip && unzip -q emailer.zip && cd emailer && ./emailer
           ```
           
           **Configuration:**
           After installation, edit `config.ini` file to configure SMTP settings and defaults.
           
-          See README.md for full documentation.
+          The application will look for `config.ini` in the following locations:
+          - Current directory
+          - Application directory
+          - User home directory
+          
+          **Usage:**
+          ```bash
+          emailer --help
+          emailer --config /path/to/config.ini
+          emailer --to recipient@example.com --subject "Test" --body "Hello World"
+          ```
+          
+          See README.md for full documentation and examples.
         files: |
           ./release-artifacts/emailer-windows-*.zip
           ./release-artifacts/emailer_*.deb
