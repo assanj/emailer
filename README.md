@@ -1,150 +1,140 @@
-Emailer - SMTP Email Sending Utility
+# Emailer - SMTP Email Sending Utility
 
-OPEN SOURCE & CROSS-PLATFORM
-Full source code available: https://github.com/assanj/emailer.git
+## OPEN SOURCE & CROSS-PLATFORM
+**Full source code available:** https://github.com/assanj/emailer
 
-QUICK START
-First run creates configuration: emailer --reset-config
-Edit emailer.ini with your SMTP settings
-Send your first email: emailer --subject "Test" --body "Hello from Emailer"
+## QUICK START
+1. Create configuration: `emailer --reset-config`
+2. Edit emailer.ini with your SMTP settings
+3. Send test email: `emailer --subject "Test" --body "Hello from Emailer"`
 
-COMMAND LINE USAGE
-BASIC OPTIONS:
---debug - Enable debug mode with console output
---subject TEXT - Email subject text
---body TEXT - Email body text
---attach FILE - Attach file to email
---no-sound - Disable sound alerts
+## COMMAND LINE PARAMETERS
 
-SMTP PARAMETERS (override INI file):
---server HOST - SMTP server address
---port NUMBER - SMTP server port
---username USER - SMTP username
---password PASS - SMTP password
---from EMAIL - From email address
---to EMAIL - To email address (comma-separated for multiple)
---ssl true|false - Enable SSL
+### Basic Email Options
+- `--debug` - Enable debug mode with detailed console output
+- `--subject TEXT` - Email subject line text
+- `--body TEXT` - Email body content text
+- `--attach FILE` - Attach file to email (supports full paths)
+- `--no-sound` - Disable all sound alerts and beeps
 
-ADVANCED FEATURES:
---cc EMAILS - Carbon copy (comma-separated emails)
---bcc EMAILS - Blind carbon copy (comma-separated emails)
---importance LEVEL - Set importance (high/normal/low)
+### SMTP Configuration (overrides INI file)
+- `--server HOST` - SMTP server hostname or IP address
+- `--port NUMBER` - SMTP server port number (default: 587)
+- `--username USER` - SMTP authentication username
+- `--password PASS` - SMTP authentication password
+- `--from EMAIL` - Sender email address
+- `--to EMAIL` - Recipient email address (supports multiple: "user1@d.com,user2@d.com")
+- `--ssl true|false` - Enable/disable SSL encryption
 
-UTILITIES:
---encrypt-password PASS - Encrypt password for INI file
---reset-config - Reset configuration files
---help, -h, /? - Show help
+### Advanced Email Features
+- `--cc EMAILS` - Carbon copy recipients (comma-separated)
+- `--bcc EMAILS` - Blind carbon copy recipients (comma-separated)
+- `--importance LEVEL` - Set email priority: high, normal, or low
 
-TEMPLATE VARIABLES:
-Use in subject and body: {host} {user} {timestamp} {time} {date}
+### Utility Commands
+- `--encrypt-password PASS` - Encrypt password for secure INI storage
+- `--reset-config` - Reset all configuration files to defaults
+- `--help, -h, /?` - Display comprehensive help information
 
-EXAMPLES
-Simple notification:
-emailer --subject "Alert from {host}" --body "User {user} at {timestamp}"
+## TEMPLATE VARIABLES
+Use these variables in subject and body:
+- `{host}` - Computer hostname
+- `{user}` - Current username
+- `{timestamp}` - Full date and time (yyyy-MM-dd HH:mm:ss)
+- `{time}` - Time only (HH:mm:ss)
+- `{date}` - Date only (yyyy-MM-dd)
 
-With SMTP parameters:
-emailer --server smtp.domain.com --port 587 --username user --password pass --from a@b.com --to c@d.com --ssl true
+## USAGE EXAMPLES
 
-With file attachment:
-emailer --attach logfile.txt --subject "Log file from {host}" --body "Generated at {timestamp}"
+**Basic notification:**
+`emailer --subject "System Alert from {host}" --body "User {user} logged in at {timestamp}"`
 
-Multiple recipients:
-emailer --to "user1@domain.com,user2@domain.com" --cc "manager@domain.com" --bcc "archive@domain.com" --importance high
+**Full SMTP configuration:**
+`emailer --server smtp.gmail.com --port 587 --username myuser --password mypass --from sender@gmail.com --to recipient@domain.com --ssl true`
 
-Debug mode:
-emailer --no-sound --debug --subject "Test" --body "Debug message"
+**Email with attachment:**
+`emailer --attach "C:\logs\application.log" --subject "Log file from {host}" --body "Generated on {date}"`
 
-CONFIGURATION FILE
-The application uses emailer.ini for settings. Default configuration:
+**Multiple recipients:**
+`emailer --to "team@company.com" --cc "manager@company.com" --bcc "archive@company.com" --importance high --subject "Urgent Report"`
+
+## CONFIGURATION FILE
+Edit emailer.ini with your SMTP settings:
 Password = yourpassword
 PasswordIsEncrypted = False
-Username = DOMAIN\user
-SmtpServer = mail.domain.ru
+Username = your_username
+SmtpServer = your.smtp.server.com
 SmtpPort = 587
-FromEmail = account@domain.ru
-ToEmail = account@domain.ru
+FromEmail = your@email.com
+ToEmail = recipient@email.com
 EnableSSL = True
-Edit these values before first use!
 
-KEY FEATURES
-CORE FUNCTIONALITY:
-- SMTP email sending with configurable server, port, and SSL
+
+## KEY FEATURES
+
+### Core Functionality
+- SMTP email sending with SSL/TLS support
 - INI file configuration with automatic creation
-- Command line arguments for all operations
-- Template variables in subject/body
+- Command line parameter override capability
+- Template variable substitution
 - Password encryption/decryption system
-- Comprehensive logging to single file
-- Standalone executable - no external DLL dependencies
+- Comprehensive single-file logging
 
-SECURITY FEATURES:
-- Password encryption toggle
-- Secure password handling with automatic encryption
-- Safe encryption event logging (no password exposure)
-- Email address validation
-- Automatic reversion on authentication failures
-
-ATTACHMENT HANDLING:
-- File attachment support with --attach parameter
-- Cross-platform file path handling
-- Automatic copying of locked files
-- Clear error messages for file access issues
-- Temporary file management
-
-ERROR HANDLING:
-- File lock detection with warnings
-- Sound alerts for critical errors (configurable)
-- Detailed exception handling with stack traces
-- SMTP authentication error detection
-- Infinite loop prevention
-- File access error recovery
-
-LOGGING SYSTEM:
-- Single file logging (emailer.log)
-- Unified debug format
-- Timestamp in all logs
-- Clean error messages without redundant text
-- Attachment logging with status
-- Cross-platform compatible format
-
-ADDITIONAL FEATURES:
-- Multiple recipient support (CC, BCC)
-- Email importance control (high/normal/low)
-- Multiple help triggers
-- Configuration reset command
-- Manual password encryption
-- Cross-platform compatibility (Windows/Linux/macOS)
-- Platform-agnostic file operations
-
-FILE STRUCTURE
-Application creates and uses:
-- emailer.ini - Configuration settings
-- emailer.log - Log file with all operations
-
-TROUBLESHOOTING
-Common issues and solutions:
-1. "Password not configured" - Edit emailer.ini and change 'yourpassword' to actual password
-2. "File is locked by another process" - Application will create temporary copy automatically
-3. SMTP authentication errors - Verify username/password in emailer.ini
-4. Attachment not found - Use full path to file
-
-TECHNICAL DETAILS
-- Built with C# .NET 8.0
-- Uses System.Net.Mail for SMTP
+### Security Features
 - Base64 password encryption
+- Automatic encryption after successful authentication
+- Safe logging without password exposure
+- Email address format validation
+- Automatic password reversion on auth failures
+
+### Attachment Handling
+- Cross-platform file attachment support
+- Automatic copying of locked/busy files
+- Temporary file management and cleanup
+- Clear error messages for file access issues
+
+### Advanced Email Capabilities
+- Multiple recipients with comma separation
+- Carbon copy (CC) and blind carbon copy (BCC)
+- Email importance/priority levels
+- Full email header support
+
+### Error Handling & Reliability
+- File lock detection with ALARM notifications
+- Sound alerts for critical errors (Windows)
+- Detailed exception handling with stack traces
+- Infinite loop prevention mechanisms
+- SMTP authentication error recovery
+
+### Cross-Platform Support
+- Windows, Linux, and macOS compatibility
+- Platform-agnostic file operations
+- Universal path handling
+- Conditional sound implementation
+
+## FILE STRUCTURE
+- `emailer` / `emailer.exe` - Main executable
+- `emailer.ini` - Configuration settings
+- `emailer.log` - Application log file
+
+## TROUBLESHOOTING
+
+**Common Issues:**
+- "Password not configured" - Edit emailer.ini and change default password
+- "File locked by another process" - Automatic temporary copy will be created
+- SMTP authentication errors - Verify credentials and server settings
+- Attachment not found - Use full file paths
+
+**Debug Mode:**
+Use `--debug` flag for detailed operation information and error tracing.
+
+## TECHNICAL DETAILS
+- Built with C# .NET 8.0
+- Uses System.Net.Mail for SMTP operations
+- Base64 encoding for password obfuscation
 - ASCII-only output for maximum compatibility
-- No emoji or special characters in output
-- Self-contained executable
+- Self-contained executable, no external dependencies
 
-TESTING
-All features are thoroughly tested:
-- Regression testing for 130+ features
-- Cross-platform verification
-- Security testing
-- Error handling validation
-
-LICENSE
-Open Source - Full code available for inspection and verification.
-
-SUPPORT
-For issues and contributions, visit:
-https://github.com/assanj/emailer.git
+## SUPPORT
+For issues, feature requests, and contributions:
+**Repository:** https://github.com/assanj/emailer
