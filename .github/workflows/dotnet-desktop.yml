@@ -398,17 +398,52 @@ jobs:
           **Downloads:**
           
           ### Windows
-          - `emailer-windows-${{ github.ref_name }}.zip` - Portable version (x64)
+          - [emailer-windows-${{ github.ref_name }}.zip](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-windows-${{ github.ref_name }}.zip) - Portable version (x64)
           
           ### Linux
-          - `emailer_1.0.0-${{ github.run_number }}_amd64.deb` - DEB package (Ubuntu/Debian, amd64)
-          - `emailer-1.0.0-${{ github.run_number }}.x86_64.rpm` - RPM package (Fedora/RHEL/CentOS, x86_64)
-          - `emailer-linux-${{ github.ref_name }}.zip` - Portable version (x64)
+          - [emailer_1.0.0-${{ github.run_number }}_amd64.deb](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer_1.0.0-${{ github.run_number }}_amd64.deb) - DEB package (Ubuntu/Debian, amd64)
+          - [emailer-1.0.0-${{ github.run_number }}.x86_64.rpm](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-1.0.0-${{ github.run_number }}.x86_64.rpm) - RPM package (Fedora/RHEL/CentOS, x86_64)
+          - [emailer-linux-${{ github.ref_name }}.zip](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-linux-${{ github.ref_name }}.zip) - Portable version (x64)
           
           ### macOS
-          - `emailer-macos-${{ github.ref_name }}.zip` - Portable version (x64)
+          - [emailer-macos-${{ github.ref_name }}.zip](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-macos-${{ github.ref_name }}.zip) - Portable version (x64)
           
-          **Quick Install (Linux):**
+          **Configuration:**
+          After installation, edit `config.ini` file to configure SMTP settings and defaults.
+          
+          The application will look for `config.ini` in the following locations:
+          - Current directory
+          - Application directory
+          - User home directory
+          
+          **Usage:**
+          ```bash
+          emailer --help
+          emailer --config /path/to/config.ini
+          emailer --to recipient@example.com --subject "Test" --body "Hello World"
+          ```
+          
+          **Installation Instructions:**
+          
+          **Windows:**
+          ```powershell
+          # Download and extract
+          Invoke-WebRequest -Uri "https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-windows-${{ github.ref_name }}.zip" -OutFile "emailer-windows-${{ github.ref_name }}.zip"
+          Expand-Archive -Path "emailer-windows-${{ github.ref_name }}.zip" -DestinationPath "."
+          cd emailer
+          .\emailer.exe
+          ```
+          
+          **macOS:**
+          ```bash
+          # Download and extract
+          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-macos-${{ github.ref_name }}.zip
+          unzip emailer-macos-${{ github.ref_name }}.zip
+          cd emailer
+          ./emailer
+          ```
+          
+          **Linux Installation:**
           
           **Ubuntu/Debian:**
           ```bash
@@ -447,24 +482,6 @@ jobs:
           ./emailer
           ```
           
-          **Windows:**
-          ```powershell
-          # Download and extract
-          Invoke-WebRequest -Uri "https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-windows-${{ github.ref_name }}.zip" -OutFile "emailer-windows-${{ github.ref_name }}.zip"
-          Expand-Archive -Path "emailer-windows-${{ github.ref_name }}.zip" -DestinationPath "."
-          cd emailer
-          .\emailer.exe
-          ```
-          
-          **macOS:**
-          ```bash
-          # Download and extract
-          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-macos-${{ github.ref_name }}.zip
-          unzip emailer-macos-${{ github.ref_name }}.zip
-          cd emailer
-          ./emailer
-          ```
-          
           **One-liner installation (Linux DEB):**
           ```bash
           # Download and install in one command (requires root)
@@ -481,21 +498,6 @@ jobs:
           ```bash
           # Download, extract and run in one command
           wget -q https://github.com/assanj/emailer/releases/latest/download/emailer-linux-*.zip -O emailer.zip && unzip -q emailer.zip && cd emailer && ./emailer
-          ```
-          
-          **Configuration:**
-          After installation, edit `config.ini` file to configure SMTP settings and defaults.
-          
-          The application will look for `config.ini` in the following locations:
-          - Current directory
-          - Application directory
-          - User home directory
-          
-          **Usage:**
-          ```bash
-          emailer --help
-          emailer --config /path/to/config.ini
-          emailer --to recipient@example.com --subject "Test" --body "Hello World"
           ```
           
           See README.md for full documentation and examples.
