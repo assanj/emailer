@@ -273,6 +273,11 @@ jobs:
     - name: Publish for Linux AppImage
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./AppDir
         
+    - name: Install FUSE for AppImage
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y fuse libfuse2
+        
     - name: Create simple AppImage structure
       run: |
         # Create simple launcher script
@@ -295,14 +300,15 @@ jobs:
         Categories=Network;Email;
         EOF
         
-    - name: Create simple AppImage using appimagetool
+    - name: Create AppImage using appimagetool
       run: |
         # Download appimagetool
         wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
         chmod +x appimagetool-x86_64.AppImage
         
-        # Create AppImage
-        ./appimagetool-x86_64.AppImage AppDir emailer-${{ github.ref_name }}-x86_64.AppImage
+        # Extract appimagetool first to avoid FUSE issues
+        ./appimagetool-x86_64.AppImage --appimage-extract
+        ./squashfs-root/AppRun AppDir emailer-${{ github.ref_name }}-x86_64.AppImage
         
     - name: Upload AppImage artifact
       uses: actions/upload-artifact@v4
