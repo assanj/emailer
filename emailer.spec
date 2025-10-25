@@ -1,37 +1,35 @@
 Name:           emailer
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        1
 Summary:        SMTP Email Sending Utility
 
 License:        MIT
 URL:            https://github.com/assanj/emailer
-
-BuildRequires:  dotnet-sdk-8.0
-Requires:       dotnet-runtime-8.0
 
 %description
 emailer is a cross-platform application for sending emails via SMTP.
 Features include SSL/TLS support, file attachments, and comprehensive logging.
 
 %prep
-%setup -q
 
 %build
-dotnet publish --configuration Release --runtime linux-x64 --self-contained true --output ./publish
 
 %install
 mkdir -p %{buildroot}/usr/bin
 mkdir -p %{buildroot}/usr/share/emailer
 mkdir -p %{buildroot}/usr/share/applications
 
-cp -r publish/* %{buildroot}/usr/share/emailer/
+# Copy files from build directory
+cp -r %{_builddir}/* %{buildroot}/usr/share/emailer/ 2>/dev/null || :
 
+# Create launcher script
 cat > %{buildroot}/usr/bin/emailer << 'EOF'
 #!/bin/bash
 exec /usr/share/emailer/emailer "$@"
 EOF
 chmod +x %{buildroot}/usr/bin/emailer
 
+# Create desktop file
 cat > %{buildroot}/usr/share/applications/emailer.desktop << 'EOF'
 [Desktop Entry]
 Name=Emailer
@@ -44,7 +42,6 @@ Categories=Network;Email;
 EOF
 
 %files
-%defattr(-,root,root,-)
 /usr/bin/emailer
 /usr/share/emailer/
 /usr/share/applications/emailer.desktop
