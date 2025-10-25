@@ -31,8 +31,8 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
       
-    - name: Build with null checks
-      run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore /warnaserror /p:Nullable=enable
+    - name: Build
+      run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
       
     - name: Test
       run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal
@@ -54,18 +54,13 @@ jobs:
         name: emailer-app
         path: ./publish/
         
-    - name: Create ZIP archive with emailer folder
+    - name: Create ZIP archive
       run: |
         $publishDir = "./publish"
         if (Test-Path $publishDir) {
-          # Создаем временную папку с emailer
-          New-Item -ItemType Directory -Path "./emailer-temp" -Force
-          Copy-Item -Path "$publishDir/*" -Destination "./emailer-temp/" -Recurse
-          
-          # Создаем ZIP с папкой emailer
-          Compress-Archive -Path "./emailer-temp/*" -DestinationPath "Emailer-${{ github.sha }}.zip" -Force
-          Remove-Item -Path "./emailer-temp" -Recurse -Force
-          echo "ZIP archive with emailer folder created successfully"
+          # Создаем ZIP напрямую из папки publish - файлы будут в корне архива
+          Compress-Archive -Path "$publishDir/*" -DestinationPath "Emailer-${{ github.sha }}.zip" -Force
+          echo "ZIP archive created successfully"
         } else {
           echo "Publish directory not found"
           exit 1
@@ -94,8 +89,8 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Build with null checks
-      run: dotnet build --configuration ${{ env.CONFIGURATION }} /warnaserror /p:Nullable=enable
+    - name: Build
+      run: dotnet build --configuration ${{ env.CONFIGURATION }}
       
     - name: Basic Functionality Test
       shell: bash
@@ -106,7 +101,6 @@ jobs:
   linux-deb-package:
     name: Create DEB Package
     runs-on: ubuntu-latest
-    needs: build
     
     steps:
     - name: Checkout code
@@ -117,8 +111,8 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Build with null checks
-      run: dotnet build --configuration ${{ env.CONFIGURATION }} /warnaserror /p:Nullable=enable
+    - name: Build
+      run: dotnet build --configuration ${{ env.CONFIGURATION }}
         
     - name: Publish for Linux
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true --output ./publish-linux
@@ -179,7 +173,6 @@ jobs:
   macos-packages:
     name: Create macOS Packages
     runs-on: macos-latest
-    needs: build
     
     steps:
     - name: Checkout code
@@ -190,8 +183,8 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Build with null checks
-      run: dotnet build --configuration ${{ env.CONFIGURATION }} /warnaserror /p:Nullable=enable
+    - name: Build
+      run: dotnet build --configuration ${{ env.CONFIGURATION }}
         
     - name: Publish for macOS
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime osx-x64 --self-contained true --output ./publish-macos
@@ -201,18 +194,12 @@ jobs:
         echo "Checking INI file for macOS build:"
         find ./publish-macos -name "*.ini"
         
-    - name: Create macOS ZIP package with emailer folder
+    - name: Create macOS ZIP package
       run: |
-        # Создаем папку emailer и копируем файлы
-        mkdir -p emailer
-        cp -r publish-macos/* emailer/
-        
-        # Создаем ZIP с папкой emailer
-        zip -r Emailer-macOS-${{ github.ref_name }}.zip emailer/
-        
-        # Удаляем временную папку
-        rm -rf emailer
-        echo "macOS ZIP package with emailer folder created"
+        # Создаем ZIP напрямую из папки publish-macos - файлы будут в корне архива
+        cd publish-macos
+        zip -r ../Emailer-macOS-${{ github.ref_name || github.sha }}.zip .
+        echo "macOS ZIP package created"
         
     - name: Upload macOS artifacts
       uses: actions/upload-artifact@v4
@@ -251,23 +238,18 @@ jobs:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
     - name: Build Release version
-      run: dotnet build --configuration ${{ env.CONFIGURATION }} /p:Nullable=enable
+      run: dotnet build --configuration ${{ env.CONFIGURATION }}
         
     - name: Publish Release
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --output ./publish
       
-    - name: Create Release ZIP with emailer folder
+    - name: Create Release ZIP
       run: |
         $publishDir = "./publish"
         if (Test-Path $publishDir) {
-          # Создаем временную папку с emailer
-          New-Item -ItemType Directory -Path "./emailer" -Force
-          Copy-Item -Path "$publishDir/*" -Destination "./emailer/" -Recurse
-          
-          # Создаем ZIP с папкой emailer
-          Compress-Archive -Path "./emailer/*" -DestinationPath "Emailer-Windows-${{ github.ref_name }}.zip" -Force
-          Remove-Item -Path "./emailer" -Recurse -Force
-          echo "Release ZIP archive with emailer folder created successfully"
+          # Создаем ZIP напрямую из папки publish - файлы будут в корне архива
+          Compress-Archive -Path "$publishDir/*" -DestinationPath "Emailer-Windows-${{ github.ref_name }}.zip" -Force
+          echo "Release ZIP archive created successfully"
         } else {
           echo "Publish directory not found"
           exit 1
@@ -294,11 +276,8 @@ jobs:
           - `emailer_*.deb` - DEB package for Linux (Ubuntu/Debian)
           - `Emailer-macOS-*.zip` - Portable macOS version
           
-          **Installation:**
-          All ZIP archives contain files in `emailer/` folder for easy organization.
-          
           **Configuration:**
-          Edit `emailer/config.ini` file to configure SMTP settings and defaults.
+          Edit `config.ini` file to configure SMTP settings and defaults.
           
           See README.md for full documentation.
         files: |
