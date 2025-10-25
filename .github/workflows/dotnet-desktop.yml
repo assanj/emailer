@@ -62,19 +62,11 @@ jobs:
     - name: Build
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
       
-    - name: Test Cross-Platform Compatibility
+    - name: Basic Functionality Test
       shell: bash
       run: |
-        if [ "$RUNNER_OS" = "Windows" ]; then
-          echo "Running Windows-specific tests"
-          dotnet test --filter "Category=Windows"
-        elif [ "$RUNNER_OS" = "Linux" ]; then
-          echo "Running Linux-specific tests"
-          dotnet test --filter "Category=Linux"
-        else
-          echo "Running macOS-specific tests"
-          dotnet test --filter "Category=macOS"
-        fi
+        echo "Running basic functionality tests on $RUNNER_OS"
+        dotnet test --verbosity normal
 
   security-scan:
     name: Security Scan
@@ -91,8 +83,8 @@ jobs:
         
     - name: Security Audit
       run: |
+        echo "Checking for vulnerable packages..."
         dotnet list package --vulnerable --include-transitive
-        dotnet dev-certs https --clean
 
   release:
     name: Create Release
@@ -113,11 +105,11 @@ jobs:
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --output ./publish
       
     - name: Create Release
+      id: create_release
       uses: softprops/action-gh-release@v1
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        files: ./publish/*
+        tag_name: ${{ github.ref_name }}
+        release_name: Emailer ${{ github.ref_name }}
         body: |
           Emailer - SMTP Email Sending Utility
           
@@ -129,5 +121,7 @@ jobs:
           - Comprehensive logging
           
           See README.md for full documentation.
+        files: |
+          ./publish/**
         draft: false
         prerelease: false
