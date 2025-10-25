@@ -2,7 +2,7 @@
 Plz see [promt.md](promt.md), thanx a lot to  <a href="https://chat.deepseek.com" target="_blank" ><img src="https://upload.wikimedia.org/wikipedia/commons/e/ec/DeepSeek_logo.svg" alt="DeepSeek" height="20"></a>  for opensorce & cross-platform
 
 
-## Download Latest Release [![Latest Release](https://img.shields.io/github/v/release/assanj/emailer?style=for-the-badge&label=Версия)](https://github.com/assanj/emailer/releases/latest)
+## Release was created & signed with GitHub’s verified signature [![Latest Release](https://img.shields.io/github/v/release/assanj/emailer?style=for-the-badge&label=Версия)](https://github.com/assanj/emailer/releases/latest)
 
 [![Linux Download](https://img.shields.io/badge/Linux-Download-orange?style=for-the-badge&logo=linux)](https://github.com/assanj/emailer/releases/latest)
 [![Windows Download](https://img.shields.io/badge/Windows-Download-blue?style=for-the-badge&logo=windows)](https://github.com/assanj/emailer/releases/latest)
