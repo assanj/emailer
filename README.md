@@ -4,8 +4,8 @@ Plz see [promt.md](promt.md), thanx a lot to  <a href="https://chat.deepseek.com
 
 ## Download Latest Release [![Latest Release](https://img.shields.io/github/v/release/assanj/emailer?style=for-the-badge&label=Версия)](https://github.com/assanj/emailer/releases/latest)
 
-[![Windows Download](https://img.shields.io/badge/Windows-Download-blue?style=for-the-badge&logo=windows)](https://github.com/assanj/emailer/releases/latest)
 [![Linux Download](https://img.shields.io/badge/Linux-Download-orange?style=for-the-badge&logo=linux)](https://github.com/assanj/emailer/releases/latest)
+[![Windows Download](https://img.shields.io/badge/Windows-Download-blue?style=for-the-badge&logo=windows)](https://github.com/assanj/emailer/releases/latest)
 [![macOS Download](https://img.shields.io/badge/macOS-Download-silver?style=for-the-badge&logo=apple)](https://github.com/assanj/emailer/releases/latest)
 
 ## QUICK START
