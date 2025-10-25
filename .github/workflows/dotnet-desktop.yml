@@ -1,11 +1,9 @@
-name: .NET Desktop Build and Test
+name: .NET Desktop Build and Release
 
 on:
   push:
-    branches: [ main, master ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ main, master ]
+    tags: [ 'v*' ]  # ТОЛЬКО на теги
+  workflow_dispatch:  # Ручной запуск
 
 env:
   DOTNET_VERSION: '8.0.x'
@@ -15,9 +13,35 @@ permissions:
   contents: write
 
 jobs:
+  validate-tag:
+    name: Validate Tag
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Полная история
+        
+    - name: Verify tag is clean
+      run: |
+        echo "Tag: ${{ github.ref_name }}"
+        echo "Tag commit: $(git rev-parse ${{ github.ref_name }})"
+        echo "Main branch commit: $(git rev-parse origin/main)"
+        
+        # Проверяем что тег указывает на коммит в main
+        git branch -a --contains ${{ github.ref_name }} | grep main
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Tag ${{ github.ref_name }} does not point to commit in main branch!"
+          exit 1
+        fi
+        echo "✅ Tag validation passed"
+
   build:
     name: Build and Test
     runs-on: windows-latest
+    needs: validate-tag
     
     steps:
     - name: Checkout code
@@ -40,53 +64,25 @@ jobs:
     - name: Publish Windows app
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --no-build --output ./publish
       
-    - name: Verify INI file included
+    - name: Create Windows ZIP
       run: |
-        echo "Checking if INI file is in publish directory:"
-        Get-ChildItem ./publish -Recurse -Filter *.ini
-        if (-not (Test-Path "./publish/config.ini")) {
-          echo "WARNING: config.ini not found in publish directory"
-        }
-        
-    - name: Upload artifacts
+        $version = "${{ github.ref_name }}" -replace '^v', ''
+        New-Item -ItemType Directory -Path "./emailer" -Force
+        Copy-Item -Path "./publish/*" -Destination "./emailer/" -Recurse
+        Compress-Archive -Path "./emailer/" -DestinationPath "emailer-windows-${{ github.ref_name }}.zip" -Force
+        Remove-Item -Path "./emailer" -Recurse -Force
+
+    - name: Upload Windows ZIP
       uses: actions/upload-artifact@v4
       with:
-        name: emailer-app
-        path: ./publish/
-        
-    - name: Create ZIP archive with emailer folder
-      run: |
-        $publishDir = "./publish"
-        if (Test-Path $publishDir) {
-          # Create emailer folder and copy files
-          New-Item -ItemType Directory -Path "./emailer" -Force
-          Copy-Item -Path "$publishDir/*" -Destination "./emailer/" -Recurse
-          
-          # Create ZIP with emailer folder inside
-          $tagName = "${{ github.ref_name }}"
-          if ($tagName -eq "") { $tagName = "latest" }
-          Compress-Archive -Path "./emailer/" -DestinationPath "emailer-windows-$tagName.zip" -Force
-          Remove-Item -Path "./emailer" -Recurse -Force
-          echo "ZIP archive with emailer folder created successfully"
-        } else {
-          echo "Publish directory not found"
-          exit 1
-        }
-        
-    - name: Upload ZIP artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: emailer-zip
-        path: emailer-windows-*.zip
-        retention-days: 30
-        
-  cross-platform-build:
-    name: Cross-Platform Build
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-        
+        name: emailer-windows
+        path: emailer-windows-${{ github.ref_name }}.zip
+
+  linux-deb-package:
+    name: Create DEB Package
+    runs-on: ubuntu-latest
+    needs: validate-tag
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -98,17 +94,46 @@ jobs:
         
     - name: Build
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
-      
-    - name: Basic Functionality Test
-      shell: bash
+        
+    - name: Publish for Linux
+      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-linux
+        
+    - name: Create DEB package
       run: |
-        echo "Running basic functionality tests on $RUNNER_OS"
-        dotnet test --verbosity normal
+        mkdir -p deb-package/usr/local/bin/emailer
+        mkdir -p deb-package/DEBIAN
+        
+        cp -r publish-linux/* deb-package/usr/local/bin/emailer/
+        
+        cat > deb-package/DEBIAN/control << EOF
+        Package: emailer
+        Version: ${{ github.ref_name }}-${{ github.run_number }}
+        Section: utils
+        Priority: optional
+        Architecture: amd64
+        Maintainer: Your Name <your-email@example.com>
+        Description: SMTP Email Sending Utility
+        EOF
+        
+        mkdir -p deb-package/usr/bin
+        cat > deb-package/usr/bin/emailer << 'EOF'
+        #!/bin/bash
+        exec /usr/local/bin/emailer/emailer "\$@"
+        EOF
+        chmod +x deb-package/usr/bin/emailer
+        
+        dpkg-deb --build deb-package emailer_${{ github.ref_name }}-${{ github.run_number }}_amd64.deb
+        
+    - name: Upload DEB artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: emailer-deb
+        path: emailer_${{ github.ref_name }}-${{ github.run_number }}_amd64.deb
 
   linux-rpm-package:
     name: Create RPM Package
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: validate-tag
     
     steps:
     - name: Checkout code
@@ -125,32 +150,28 @@ jobs:
     - name: Publish for Linux
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true --output ./publish-linux
         
-    - name: Install fpm for easy package creation
+    - name: Install fpm
       run: |
         sudo apt-get update
         sudo apt-get install -y ruby ruby-dev rpm build-essential
         sudo gem install fpm
         
-    - name: Create RPM package using fpm
+    - name: Create RPM package
       run: |
-        # Create package structure
         mkdir -p /tmp/emailer-pkg/usr/bin
         mkdir -p /tmp/emailer-pkg/usr/share/emailer
         
-        # Copy application files
         cp -r publish-linux/* /tmp/emailer-pkg/usr/share/emailer/
         
-        # Create launcher script
         cat > /tmp/emailer-pkg/usr/bin/emailer << 'EOF'
         #!/bin/bash
-        exec /usr/share/emailer/emailer "$@"
+        exec /usr/share/emailer/emailer "\$@"
         EOF
         chmod +x /tmp/emailer-pkg/usr/bin/emailer
         
-        # Create RPM package
         fpm -s dir -t rpm \
           -n emailer \
-          -v 1.0.0 \
+          -v ${{ github.ref_name }} \
           --iteration ${{ github.run_number }} \
           -C /tmp/emailer-pkg \
           --description "SMTP Email Sending Utility" \
@@ -161,89 +182,13 @@ jobs:
     - name: Upload RPM artifact
       uses: actions/upload-artifact@v4
       with:
-        name: emailer-rpm-package
-        path: emailer-*.rpm
-        retention-days: 30
-        
-  linux-deb-package:
-    name: Create DEB Package
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Build
-      run: dotnet build --configuration ${{ env.CONFIGURATION }}
-        
-    - name: Publish for Linux
-      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-linux
-        
-    - name: Verify INI file for Linux
-      run: |
-        echo "Checking INI file for Linux build:"
-        find ./publish-linux -name "*.ini"
-        echo "Files in publish directory:"
-        ls -la ./publish-linux/
-        
-    - name: Install dpkg tools
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y dpkg-dev debhelper
-        
-    - name: Create DEB package structure
-      run: |
-        mkdir -p deb-package/usr/local/bin/emailer
-        mkdir -p deb-package/DEBIAN
-        
-        # Copy published files (including INI)
-        cp -r publish-linux/* deb-package/usr/local/bin/emailer/
-        
-        # Create control file for DEB package
-        cat > deb-package/DEBIAN/control << EOF
-        Package: emailer
-        Version: 1.0.0-${{ github.run_number }}
-        Section: utils
-        Priority: optional
-        Architecture: amd64
-        Maintainer: Your Name <your-email@example.com>
-        Description: SMTP Email Sending Utility
-         emailer is a cross-platform application for sending emails via SMTP.
-         Features include SSL/TLS support, file attachments, and comprehensive logging.
-        EOF
-        
-        # Create launcher script
-        mkdir -p deb-package/usr/bin
-        cat > deb-package/usr/bin/emailer << EOF
-        #!/bin/bash
-        exec /usr/local/bin/emailer/emailer "\$@"
-        EOF
-        chmod +x deb-package/usr/bin/emailer
-        
-        echo "DEB package structure created"
-        
-    - name: Build DEB package
-      run: |
-        dpkg-deb --build deb-package emailer_1.0.0-${{ github.run_number }}_amd64.deb
-        echo "DEB package built successfully"
-        
-    - name: Upload DEB artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: emailer-deb-package
-        path: emailer_*.deb
-        retention-days: 30
-        
+        name: emailer-rpm
+        path: emailer-${{ github.ref_name }}-${{ github.run_number }}.x86_64.rpm
+
   linux-portable:
     name: Create Linux Portable
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: validate-tag
     
     steps:
     - name: Checkout code
@@ -260,30 +205,23 @@ jobs:
     - name: Publish for Linux
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-linux
         
-    - name: Create Linux ZIP package with emailer folder
+    - name: Create Linux ZIP
       run: |
-        # Create emailer folder and copy files
         mkdir -p emailer
         cp -r publish-linux/* emailer/
-        
-        # Create ZIP with emailer folder inside
         zip -r emailer-linux-${{ github.ref_name }}.zip emailer/
-        
-        # Cleanup temp folder
         rm -rf emailer
-        echo "Linux ZIP package with emailer folder created"
         
-    - name: Upload Linux portable artifact
+    - name: Upload Linux portable
       uses: actions/upload-artifact@v4
       with:
         name: emailer-linux-portable
-        path: emailer-linux-*.zip
-        retention-days: 30
-        
-  macos-packages:
-    name: Create macOS Packages
+        path: emailer-linux-${{ github.ref_name }}.zip
+
+  macos-package:
+    name: Create macOS Package
     runs-on: macos-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: validate-tag
     
     steps:
     - name: Checkout code
@@ -300,36 +238,23 @@ jobs:
     - name: Publish for macOS
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime osx-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-macos
         
-    - name: Verify INI file for macOS
+    - name: Create macOS ZIP
       run: |
-        echo "Checking INI file for macOS build:"
-        find ./publish-macos -name "*.ini"
-        
-    - name: Create macOS ZIP package with emailer folder
-      run: |
-        # Create emailer folder and copy files
         mkdir -p emailer
         cp -r publish-macos/* emailer/
-        
-        # Create ZIP with emailer folder inside
         zip -r emailer-macos-${{ github.ref_name }}.zip emailer/
-        
-        # Cleanup temp folder
         rm -rf emailer
-        echo "macOS ZIP package with emailer folder created"
         
-    - name: Upload macOS artifacts
+    - name: Upload macOS artifact
       uses: actions/upload-artifact@v4
       with:
-        name: emailer-macos-packages
-        path: emailer-macos-*.zip
-        retention-days: 30
-        
+        name: emailer-macos
+        path: emailer-macos-${{ github.ref_name }}.zip
+
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [build, cross-platform-build, linux-deb-package, linux-rpm-package, linux-portable, macos-packages]
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, linux-deb-package, linux-rpm-package, linux-portable, macos-package]
     permissions:
       contents: write
     
@@ -338,47 +263,13 @@ jobs:
       uses: actions/checkout@v4
       
     - name: Download all artifacts
-      run: |
-        mkdir -p release-artifacts
-        
-    - name: Download Windows ZIP
       uses: actions/download-artifact@v4
       with:
-        name: emailer-zip
         path: ./release-artifacts
         
-    - name: Download DEB package
-      uses: actions/download-artifact@v4
-      with:
-        name: emailer-deb-package
-        path: ./release-artifacts
-        
-    - name: Download RPM package
-      uses: actions/download-artifact@v4
-      with:
-        name: emailer-rpm-package
-        path: ./release-artifacts
-        
-    - name: Download Linux portable
-      uses: actions/download-artifact@v4
-      with:
-        name: emailer-linux-portable
-        path: ./release-artifacts
-        
-    - name: Download macOS packages
-      uses: actions/download-artifact@v4
-      with:
-        name: emailer-macos-packages
-        path: ./release-artifacts
+    - name: List downloaded files
+      run: ls -la ./release-artifacts/
       
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Build Release version
-      run: dotnet build --configuration ${{ env.CONFIGURATION }}
-        
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
@@ -401,29 +292,27 @@ jobs:
           - `emailer-windows-${{ github.ref_name }}.zip` - Portable version (x64)
           
           ### Linux
-          - `emailer_*.deb` - DEB package (Ubuntu/Debian, amd64)
-          - `emailer-*.rpm` - RPM package (Fedora/RHEL/CentOS, x86_64)
-          - `emailer-linux-*.zip` - Portable version (x64)
+          - `emailer_${{ github.ref_name }}-${{ github.run_number }}_amd64.deb` - DEB package (Ubuntu/Debian)
+          - `emailer-${{ github.ref_name }}-${{ github.run_number }}.x86_64.rpm` - RPM package (Fedora/RHEL/CentOS)
+          - `emailer-linux-${{ github.ref_name }}.zip` - Portable version
           
           ### macOS
           - `emailer-macos-${{ github.ref_name }}.zip` - Portable version (x64)
           
           **Installation:**
           - **Windows**: Extract ZIP and run `emailer.exe`
-          - **Linux DEB**: `sudo dpkg -i emailer_*.deb`
-          - **Linux RPM**: `sudo rpm -i emailer-*.rpm` 
+          - **Linux DEB**: `sudo dpkg -i emailer_${{ github.ref_name }}-${{ github.run_number }}_amd64.deb`
+          - **Linux RPM**: `sudo rpm -i emailer-${{ github.ref_name }}-${{ github.run_number }}.x86_64.rpm`
           - **Linux Portable**: Extract ZIP and run `./emailer`
           - **macOS**: Extract ZIP and run `./emailer`
           
           **Configuration:**
           Edit `config.ini` file to configure SMTP settings and defaults.
-          
-          See README.md for full documentation.
         files: |
-          ./release-artifacts/emailer-windows-*.zip
-          ./release-artifacts/emailer_*.deb
-          ./release-artifacts/emailer-*.rpm
-          ./release-artifacts/emailer-linux-*.zip
-          ./release-artifacts/emailer-macos-*.zip
+          release-artifacts/emailer-windows-${{ github.ref_name }}.zip
+          release-artifacts/emailer_${{ github.ref_name }}-${{ github.run_number }}_amd64.deb
+          release-artifacts/emailer-${{ github.ref_name }}-${{ github.run_number }}.x86_64.rpm
+          release-artifacts/emailer-linux-${{ github.ref_name }}.zip
+          release-artifacts/emailer-macos-${{ github.ref_name }}.zip
         draft: false
         prerelease: false
