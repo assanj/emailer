@@ -31,15 +31,23 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
       
-    - name: Build
-      run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
+    - name: Build with null checks
+      run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore /warnaserror /p:Nullable=enable
       
     - name: Test
       run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal
       
-    - name: Publish
+    - name: Publish Windows app
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --no-build --output ./publish
       
+    - name: Verify INI file included
+      run: |
+        echo "Checking if INI file is in publish directory:"
+        Get-ChildItem ./publish -Recurse -Filter *.ini
+        if (-not (Test-Path "./publish/config.ini")) {
+          echo "WARNING: config.ini not found in publish directory"
+        }
+        
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
@@ -80,8 +88,8 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Build
-      run: dotnet build --configuration ${{ env.CONFIGURATION }}
+    - name: Build with null checks
+      run: dotnet build --configuration ${{ env.CONFIGURATION }} /warnaserror /p:Nullable=enable
       
     - name: Basic Functionality Test
       shell: bash
@@ -103,8 +111,16 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
+    - name: Build with null checks
+      run: dotnet build --configuration ${{ env.CONFIGURATION }} /warnaserror /p:Nullable=enable
+        
     - name: Publish for Linux
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true --output ./publish-linux
+        
+    - name: Verify INI file for Linux
+      run: |
+        echo "Checking INI file for Linux build:"
+        find ./publish-linux -name "*.ini"
         
     - name: Install dpkg tools
       run: |
@@ -116,7 +132,7 @@ jobs:
         mkdir -p deb-package/usr/local/bin/emailer
         mkdir -p deb-package/DEBIAN
         
-        # Копируем опубликованные файлы
+        # Копируем опубликованные файлы (включая INI)
         cp -r publish-linux/* deb-package/usr/local/bin/emailer/
         
         # Создаем control файл для DEB пакета
@@ -154,7 +170,6 @@ jobs:
         path: emailer_*.deb
         retention-days: 30
         
-  # ДОБАВЛЕНО: Создание пакетов для macOS
   macos-packages:
     name: Create macOS Packages
     runs-on: macos-latest
@@ -169,8 +184,16 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
+    - name: Build with null checks
+      run: dotnet build --configuration ${{ env.CONFIGURATION }} /warnaserror /p:Nullable=enable
+        
     - name: Publish for macOS
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime osx-x64 --self-contained true --output ./publish-macos
+        
+    - name: Verify INI file for macOS
+      run: |
+        echo "Checking INI file for macOS build:"
+        find ./publish-macos -name "*.ini"
         
     - name: Create macOS ZIP package
       run: |
@@ -178,27 +201,11 @@ jobs:
         zip -r ../Emailer-macOS-${{ github.ref_name }}.zip .
         echo "macOS ZIP package created"
         
-    - name: Create macOS DMG package (optional)
-      run: |
-        # Устанавливаем инструменты для создания DMG
-        brew install create-dmg
-        
-        # Создаем структуру для DMG
-        mkdir -p dmg-package
-        cp -r publish-macos/* dmg-package/
-        
-        # Создаем DMG (если приложение имеет .app bundle)
-        # create-dmg --volname "Emailer ${{ github.ref_name }}" Emailer-macOS-${{ github.ref_name }}.dmg dmg-package/
-        
-        echo "DMG creation setup completed"
-        
     - name: Upload macOS artifacts
       uses: actions/upload-artifact@v4
       with:
         name: emailer-macos-packages
-        path: |
-          Emailer-macOS-*.zip
-          # Emailer-macOS-*.dmg
+        path: Emailer-macOS-*.zip
         retention-days: 30
         
   release:
@@ -230,6 +237,9 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
+    - name: Build Release version
+      run: dotnet build --configuration ${{ env.CONFIGURATION }} /p:Nullable=enable
+        
     - name: Publish Release
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --output ./publish
       
@@ -258,17 +268,20 @@ jobs:
           - File attachment support
           - Password encryption
           - Comprehensive logging
+          - Configuration via config.ini file
           
           **Downloads:**
           - `Emailer-Windows-*.zip` - Portable Windows version
           - `emailer_*.deb` - DEB package for Linux (Ubuntu/Debian)
           - `Emailer-macOS-*.zip` - Portable macOS version
           
+          **Configuration:**
+          Edit `config.ini` file to configure SMTP settings and defaults.
+          
           See README.md for full documentation.
         files: |
           ./Emailer-Windows-${{ github.ref_name }}.zip
           ./emailer_*.deb
           ./Emailer-macOS-*.zip
-          # ./Emailer-macOS-*.dmg
         draft: false
         prerelease: false
