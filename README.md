@@ -1,72 +1,61 @@
-# Emailer - SMTP Email Sending Utility
+Emailer - SMTP Email Sending Utility
 
-## OPEN SOURCE & CROSS-PLATFORM
+OPEN SOURCE & CROSS-PLATFORM
 Full source code available: https://github.com/assanj/emailer.git
 
-## QUICK START
+QUICK START
+First run creates configuration: emailer --reset-config
+Edit emailer.ini with your SMTP settings
+Send your first email: emailer --subject "Test" --body "Hello from Emailer"
 
-1. First run creates configuration:
-   emailer --reset-config
-
-2. Edit emailer.ini with your SMTP settings
-
-3. Send your first email:
-   emailer --subject "Test" --body "Hello from Emailer"
-
-## COMMAND LINE USAGE
-
+COMMAND LINE USAGE
 BASIC OPTIONS:
-  --debug           Enable debug mode with console output
-  --subject TEXT    Email subject text
-  --body TEXT       Email body text
-  --attach FILE     Attach file to email
-  --no-sound        Disable sound alerts
+--debug - Enable debug mode with console output
+--subject TEXT - Email subject text
+--body TEXT - Email body text
+--attach FILE - Attach file to email
+--no-sound - Disable sound alerts
 
 SMTP PARAMETERS (override INI file):
-  --server HOST     SMTP server address
-  --port NUMBER     SMTP server port
-  --username USER   SMTP username
-  --password PASS   SMTP password
-  --from EMAIL      From email address
-  --to EMAIL        To email address (comma-separated for multiple)
-  --ssl true|false  Enable SSL
+--server HOST - SMTP server address
+--port NUMBER - SMTP server port
+--username USER - SMTP username
+--password PASS - SMTP password
+--from EMAIL - From email address
+--to EMAIL - To email address (comma-separated for multiple)
+--ssl true|false - Enable SSL
 
 ADVANCED FEATURES:
-  --cc EMAILS       Carbon copy (comma-separated emails)
-  --bcc EMAILS      Blind carbon copy (comma-separated emails)
-  --importance LEVEL Set importance (high/normal/low)
+--cc EMAILS - Carbon copy (comma-separated emails)
+--bcc EMAILS - Blind carbon copy (comma-separated emails)
+--importance LEVEL - Set importance (high/normal/low)
 
 UTILITIES:
-  --encrypt-password PASS  Encrypt password for INI file
-  --reset-config    Reset configuration files
-  --help, -h, /?   Show help
+--encrypt-password PASS - Encrypt password for INI file
+--reset-config - Reset configuration files
+--help, -h, /? - Show help
 
 TEMPLATE VARIABLES:
-  Use in subject and body:
-  {host} {user} {timestamp} {time} {date}
+Use in subject and body: {host} {user} {timestamp} {time} {date}
 
-## EXAMPLES
-
+EXAMPLES
 Simple notification:
-  emailer --subject "Alert from {host}" --body "User {user} at {timestamp}"
+emailer --subject "Alert from {host}" --body "User {user} at {timestamp}"
 
 With SMTP parameters:
-  emailer --server smtp.domain.com --port 587 --username user --password pass --from a@b.com --to c@d.com --ssl true
+emailer --server smtp.domain.com --port 587 --username user --password pass --from a@b.com --to c@d.com --ssl true
 
 With file attachment:
-  emailer --attach logfile.txt --subject "Log file from {host}" --body "Generated at {timestamp}"
+emailer --attach logfile.txt --subject "Log file from {host}" --body "Generated at {timestamp}"
 
 Multiple recipients:
-  emailer --to "user1@domain.com,user2@domain.com" --cc "manager@domain.com" --bcc "archive@domain.com" --importance high
+emailer --to "user1@domain.com,user2@domain.com" --cc "manager@domain.com" --bcc "archive@domain.com" --importance high
 
 Debug mode:
-  emailer --no-sound --debug --subject "Test" --body "Debug message"
+emailer --no-sound --debug --subject "Test" --body "Debug message"
 
-## CONFIGURATION FILE
-
-The application uses emailer.ini for settings:
-
-[Default Configuration]
+CONFIGURATION FILE
+The application uses emailer.ini for settings. Default configuration:
 Password = yourpassword
 PasswordIsEncrypted = False
 Username = DOMAIN\user
@@ -75,11 +64,9 @@ SmtpPort = 587
 FromEmail = account@domain.ru
 ToEmail = account@domain.ru
 EnableSSL = True
-
 Edit these values before first use!
 
-## KEY FEATURES
-
+KEY FEATURES
 CORE FUNCTIONALITY:
 - SMTP email sending with configurable server, port, and SSL
 - INI file configuration with automatic creation
@@ -128,34 +115,19 @@ ADDITIONAL FEATURES:
 - Cross-platform compatibility (Windows/Linux/macOS)
 - Platform-agnostic file operations
 
-## FILE STRUCTURE
-
+FILE STRUCTURE
 Application creates and uses:
 - emailer.ini - Configuration settings
 - emailer.log - Log file with all operations
 
-## TROUBLESHOOTING
-
+TROUBLESHOOTING
 Common issues and solutions:
+1. "Password not configured" - Edit emailer.ini and change 'yourpassword' to actual password
+2. "File is locked by another process" - Application will create temporary copy automatically
+3. SMTP authentication errors - Verify username/password in emailer.ini
+4. Attachment not found - Use full path to file
 
-1. "Password not configured"
-   - Edit emailer.ini and change 'yourpassword' to actual password
-
-2. "File is locked by another process"
-   - Application will create temporary copy automatically
-   - Check if file is open in another program
-
-3. SMTP authentication errors
-   - Verify username/password in emailer.ini
-   - Check SMTP server settings
-   - Ensure SSL setting is correct
-
-4. Attachment not found
-   - Use full path to file
-   - Check file permissions
-
-## TECHNICAL DETAILS
-
+TECHNICAL DETAILS
 - Built with C# .NET 8.0
 - Uses System.Net.Mail for SMTP
 - Base64 password encryption
@@ -163,22 +135,16 @@ Common issues and solutions:
 - No emoji or special characters in output
 - Self-contained executable
 
-## TESTING
-
+TESTING
 All features are thoroughly tested:
 - Regression testing for 130+ features
 - Cross-platform verification
 - Security testing
 - Error handling validation
 
-## LICENSE
-
+LICENSE
 Open Source - Full code available for inspection and verification.
 
-## SUPPORT
-
+SUPPORT
 For issues and contributions, visit:
 https://github.com/assanj/emailer.git
-
----
-Emailer - Reliable SMTP email sending made simple
