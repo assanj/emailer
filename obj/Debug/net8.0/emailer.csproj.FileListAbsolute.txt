@@ -1,0 +1,15 @@
+C:\Users\MSKazakov\source\smtp3\emailer\bin\Debug\net8.0\emailer.exe
+C:\Users\MSKazakov\source\smtp3\emailer\bin\Debug\net8.0\emailer.deps.json
+C:\Users\MSKazakov\source\smtp3\emailer\bin\Debug\net8.0\emailer.runtimeconfig.json
+C:\Users\MSKazakov\source\smtp3\emailer\bin\Debug\net8.0\emailer.dll
+C:\Users\MSKazakov\source\smtp3\emailer\bin\Debug\net8.0\emailer.pdb
+C:\Users\MSKazakov\source\smtp3\emailer\obj\Debug\net8.0\emailer.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\MSKazakov\source\smtp3\emailer\obj\Debug\net8.0\emailer.AssemblyInfoInputs.cache
+C:\Users\MSKazakov\source\smtp3\emailer\obj\Debug\net8.0\emailer.AssemblyInfo.cs
+C:\Users\MSKazakov\source\smtp3\emailer\obj\Debug\net8.0\emailer.csproj.CoreCompileInputs.cache
+C:\Users\MSKazakov\source\smtp3\emailer\obj\Debug\net8.0\emailer.sourcelink.json
+C:\Users\MSKazakov\source\smtp3\emailer\obj\Debug\net8.0\emailer.dll
+C:\Users\MSKazakov\source\smtp3\emailer\obj\Debug\net8.0\refint\emailer.dll
+C:\Users\MSKazakov\source\smtp3\emailer\obj\Debug\net8.0\emailer.pdb
+C:\Users\MSKazakov\source\smtp3\emailer\obj\Debug\net8.0\emailer.genruntimeconfig.cache
+C:\Users\MSKazakov\source\smtp3\emailer\obj\Debug\net8.0\ref\emailer.dll
