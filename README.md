@@ -9,9 +9,8 @@
 [![Latest Release](https://img.shields.io/github/v/release/assanj/emailer?style=for-the-badge&label=Версия)](https://github.com/assanj/emailer/releases/latest)
 
 ## QUICK START
-1. Create configuration: `emailer --reset-config`
-2. Edit emailer.ini with your SMTP settings
-3. Send test email: `emailer --subject "Test" --body "Hello from Emailer"`
+1. Edit emailer.ini with your SMTP settings
+2. Send test email: `emailer --subject "Test" --body "Hello from Emailer"`
 
 ## COMMAND LINE PARAMETERS
 
