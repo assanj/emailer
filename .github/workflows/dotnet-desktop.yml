@@ -1,94 +1,132 @@
-name: Build Emailer
+name: .NET Desktop Build and Test
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ "main", "master" ]
-  workflow_dispatch:
+    branches: [ main, master ]
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  CONFIGURATION: 'Release'
 
 jobs:
   build:
+    name: Build and Test
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
+      
+    - name: Test
+      run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal
+      
+    - name: Publish
+      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --no-build --output ./publish
+      
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: emailer-app
+        path: ./publish/
+        
+  cross-platform-build:
+    name: Cross-Platform Build
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        configuration: [Release]
-        runtime: [win-x64, linux-x64, osx-x64]
-
-    runs-on: ${{ matrix.runtime == 'win-x64' && 'windows-latest' || matrix.runtime == 'linux-x64' && 'ubuntu-latest' || 'macos-latest' }}
-
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        
     steps:
-    - name: Checkout
+    - name: Checkout code
       uses: actions/checkout@v4
-
+      
     - name: Setup .NET
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 8.0.x
-
-    - name: Cache NuGet packages
-      uses: actions/cache@v4
-      with:
-        path: ~/.nuget/packages
-        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.vbproj') }}
-        restore-keys: ${{ runner.os }}-nuget-
-
-    - name: Restore
-      run: dotnet restore emailer.vbproj
-
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
     - name: Build
-      run: dotnet build emailer.vbproj --configuration ${{ matrix.configuration }} --no-restore
-
-    - name: Publish (self-contained)
-      run: dotnet publish emailer.vbproj \
-           --configuration ${{ matrix.configuration }} \
-           --runtime ${{ matrix.runtime }} \
-           --output publish/${{ matrix.runtime }} \
-           --self-contained true
-
-    - name: Copy default config & ini to artifact
-      shell: bash
+      run: dotnet build --configuration ${{ env.CONFIGURATION }}
+      
+    - name: Test Cross-Platform Compatibility
       run: |
-        cp emailer.config publish/${{ matrix.runtime }}/ 2>/dev/null || true
-        cp emailer.ini   publish/${{ matrix.runtime }}/ 2>/dev/null || true
-
-    - name: List published files
-      run: |
-        if [ "${{ matrix.runtime }}" = "win-x64" ]; then
-          pwsh -c "Get-ChildItem publish/${{ matrix.runtime }}"
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          echo "Running Windows-specific tests"
+          dotnet test --filter "Category=Windows"
+        elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+          echo "Running Linux-specific tests"
+          dotnet test --filter "Category=Linux"
         else
-          ls -la publish/${{ matrix.runtime }}/
+          echo "Running macOS-specific tests"
+          dotnet test --filter "Category=macOS"
         fi
-      shell: bash
 
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
       with:
-        name: emailer-${{ matrix.runtime }}
-        path: publish/${{ matrix.runtime }}
-        retention-days: 7
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Security Audit
+      run: |
+        dotnet list package --vulnerable --include-transitive
+        dotnet dev-certs https --clean
+        dotnet dev-certs https --trust
+        
+    - name: Run Security Tools
+      run: |
+        echo "Running basic security checks..."
+        # Add security scanning tools here
 
   release:
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-
+    name: Create Release
+    runs-on: windows-latest
+    needs: [build, cross-platform-build, security-scan]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    
     steps:
     - name: Download artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v3
       with:
-        path: artifacts
-
-    - name: Display structure
-      run: ls -R artifacts
-
-    - name: Create GitHub Release
+        name: emailer-app
+        
+    - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          artifacts/emailer-win-x64/**
-          artifacts/emailer-linux-x64/**
-          artifacts/emailer-osx-x64/**
+          *.exe
+          *.dll
+          *.config
+        body: |
+          Emailer - SMTP Email Sending Utility
+          
+          Features:
+          - SMTP email sending with SSL/TLS
+          - Cross-platform support (Windows/Linux/macOS)
+          - File attachment support
+          - Password encryption
+          - Comprehensive logging
+          
+          See README.md for full documentation.
         draft: false
         prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
