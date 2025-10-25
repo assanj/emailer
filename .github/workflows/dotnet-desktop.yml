@@ -37,7 +37,7 @@ jobs:
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --no-build --output ./publish
       
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: emailer-app
         path: ./publish/
@@ -63,10 +63,10 @@ jobs:
       
     - name: Test Cross-Platform Compatibility
       run: |
-        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+        if [ "$RUNNER_OS" == "Windows" ]; then
           echo "Running Windows-specific tests"
           dotnet test --filter "Category=Windows"
-        elif [ "${{ matrix.os }}" == "ubuntu-latest" ]; then
+        elif [ "$RUNNER_OS" == "Linux" ]; then
           echo "Running Linux-specific tests"
           dotnet test --filter "Category=Linux"
         else
@@ -91,12 +91,6 @@ jobs:
       run: |
         dotnet list package --vulnerable --include-transitive
         dotnet dev-certs https --clean
-        dotnet dev-certs https --trust
-        
-    - name: Run Security Tools
-      run: |
-        echo "Running basic security checks..."
-        # Add security scanning tools here
 
   release:
     name: Create Release
@@ -106,7 +100,7 @@ jobs:
     
     steps:
     - name: Download artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: emailer-app
         
