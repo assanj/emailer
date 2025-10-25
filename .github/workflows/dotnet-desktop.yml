@@ -45,24 +45,20 @@ jobs:
         path: ${{ github.workspace }}/**/bin/${{ matrix.configuration }}/**/*
         retention-days: 7
 
-    # Новый шаг: создание ZIP-архива для Release сборки
-    - name: Create Release ZIP Archive
+    # ДОБАВЛЕНО: Создание ZIP архива для Release версии
+    - name: Create ZIP archive for Release
       if: matrix.configuration == 'Release'
       run: |
-        $releaseDir = Get-ChildItem -Path . -Recurse -Directory | Where-Object { $_.FullName -like "*\bin\Release\*" -and $_.FullName -notlike "*\obj\*" } | Select-Object -First 1
+        $releaseDir = Get-ChildItem -Path . -Recurse -Directory | Where-Object { $_.FullName -like "*\bin\Release\*" -and $_.FullName -not like "*\obj\*" } | Select-Object -First 1
         if ($releaseDir) {
-          $zipPath = "Emailer-Release-${{ github.sha }}.zip"
-          Compress-Archive -Path "$($releaseDir.FullName)\*" -DestinationPath $zipPath -Force
-          Write-Host "Created ZIP archive: $zipPath"
-        } else {
-          Write-Error "Release directory not found"
-          exit 1
+          Compress-Archive -Path "$($releaseDir.FullName)\*" -DestinationPath "Emailer-Release.zip" -Force
         }
 
-    - name: Upload Release ZIP Artifact
+    # ДОБАВЛЕНО: Загрузка ZIP архива как артефакт
+    - name: Upload ZIP artifact
       if: matrix.configuration == 'Release'
       uses: actions/upload-artifact@v4
       with:
         name: Emailer-Release-ZIP
-        path: Emailer-Release-${{ github.sha }}.zip
+        path: Emailer-Release.zip
         retention-days: 30
