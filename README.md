@@ -10,7 +10,7 @@ Plz see [promt.md](promt.md), thanx a lot to  <a href="https://chat.deepseek.com
 
 ## QUICK START FOR Linux/Windows/MacOs:
 1. Edit emailer.ini with your SMTP settings and from the same directory: `emailer --subject "Test" --body "Hello from Emailer"`
-2. OR easy: `emailer --server smtp.gmail.com --port 587 --username myuser --password mypass --from sender@gmail.com --to recipient@domain.com --ssl true --debug`
+2. OR easy: `emailer --server smtp.gmail.ru --port 587 --username myuser --password mypass --from sender@gmail.ru --to recipient@domain.ru --ssl true --debug`
 
 ## COMMAND LINE PARAMETERS
 
@@ -54,23 +54,23 @@ Use these variables in subject and body:
 `emailer --subject "System Alert from {host}" --body "User {user} logged in at {timestamp}"`
 
 **Full SMTP configuration:**
-`emailer --server smtp.gmail.com --port 587 --username myuser --password mypass --from sender@gmail.com --to recipient@domain.com --ssl true`
+`emailer --server smtp.gmail.ru --port 587 --username myuser --password mypass --from sender@gmail.ru --to recipient@domain.ru --ssl true`
 
 **Email with attachment:**
 `emailer --attach "C:\logs\application.log" --subject "Log file from {host}" --body "Generated on {date}"`
 
 **Multiple recipients:**
-`emailer --to "team@company.com" --cc "manager@company.com" --bcc "archive@company.com" --importance high --subject "Urgent Report"`
+`emailer --to "team@company.ru" --cc "manager@company.ru" --bcc "archive@company.ru" --importance high --subject "Urgent Report"`
 
 ## CONFIGURATION FILE
 Edit emailer.ini with your SMTP settings:
 Password = yourpassword
 PasswordIsEncrypted = False
 Username = your_username
-SmtpServer = your.smtp.server.com
+SmtpServer = your.smtp.server.ru
 SmtpPort = 587
-FromEmail = your@email.com
-ToEmail = recipient@email.com
+FromEmail = your@email.ru
+ToEmail = recipient@email.ru
 EnableSSL = True
 
 
