@@ -1,3 +1,4 @@
+
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -8,7 +9,6 @@ using System.Text;
 using System.Threading;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace emailer
 {
@@ -47,46 +47,37 @@ namespace emailer
         private string _cmdBcc = "";
         private string _cmdImportance = "normal";
 
-        // Constants for application version
-        private const string APP_VERSION = "1.10";
-        private const string APP_NAME = "SMTP Email Sending Utility";
-
         public void Run(string[] args)
         {
-            try // Main execution block start
+            try
             {
                 string appDir = AppDomain.CurrentDomain.BaseDirectory;
                 _iniPath = Path.Combine(appDir, "emailer.ini");
                 _logPath = Path.Combine(appDir, "emailer.log");
 
-                // Handle help and version parameters first
-                if (IsHelpRequested(args)) // Help request check start
+                if (args.Contains("--help") || args.Contains("-h") ||
+                    args.Contains("/?") || args.Contains("-?") ||
+                    args.Contains("--?") || args.Contains("?"))
                 {
                     ShowHelp();
                     return;
-                } // Help request check end
+                }
 
-                if (IsVersionRequested(args)) // Version request check start
-                {
-                    ShowVersion();
-                    return;
-                } // Version request check end
-
-                if (args.Contains("--encrypt-password")) // Encrypt password command check start
+                if (args.Contains("--encrypt-password"))
                 {
                     EncryptPasswordCommand(args);
                     return;
-                } // Encrypt password command check end
+                }
 
-                if (args.Contains("--reset-config")) // Reset config command check start
+                if (args.Contains("--reset-config"))
                 {
                     ResetConfigurationCommand();
                     return;
-                } // Reset config command check end
+                }
 
                 ParseArguments(args);
 
-                if (_debug && !_debugModeLogged) // Debug mode initialization check start
+                if (_debug && !_debugModeLogged)
                 {
                     ShowConsole();
                     string debugMessage = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [DEBUG MODE] {Environment.MachineName} | {DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} | {AppDomain.CurrentDomain.BaseDirectory}";
@@ -95,55 +86,24 @@ namespace emailer
                     Console.WriteLine(debugMessage);
 
                     _debugModeLogged = true;
-                } // Debug mode initialization check end
+                }
 
                 SendEmail();
-            } // Main execution block end
-            catch (Exception ex) // Main exception handling start
+            }
+            catch (Exception ex)
             {
                 HandleException("CRITICAL ERROR in Main", ex);
                 Environment.Exit(1);
-            } // Main exception handling end
-        }
-
-        /// <summary>
-        /// Check if help was requested via any supported parameter
-        /// </summary>
-        private bool IsHelpRequested(string[] args)
-        {
-            string[] helpParams = { "--help", "-h", "/?", "-?", "--?", "?" };
-            return args.Any(arg => helpParams.Contains(arg.ToLower()));
-        }
-
-        /// <summary>
-        /// Check if version was requested via any supported parameter
-        /// </summary>
-        private bool IsVersionRequested(string[] args)
-        {
-            string[] versionParams = { "--version", "-version", "--v", "-v", "/v" };
-            return args.Any(arg => versionParams.Contains(arg.ToLower()));
-        }
-
-        /// <summary>
-        /// Display application version information
-        /// </summary>
-        private void ShowVersion()
-        {
-            ShowConsole();
-            Console.WriteLine($"{APP_NAME} v{APP_VERSION}");
-            Console.WriteLine("Open Source SMTP Email Utility");
-            Console.WriteLine("Full code available: https://github.com/assanj/emailer.git");
+            }
         }
 
         private void ShowHelp()
         {
-            string helpText = $@"
-{APP_NAME} v{APP_VERSION} - OPEN SOURCE & CROSS-PLATFORM
+            string helpText = @"
+SMTP Email Sending Utility (OPEN SOURCE & CROSS-PLATFORM)
 Full code available for inspection: https://github.com/assanj/emailer.git
-
 USAGE:
   emailer [OPTIONS]
-
 SMTP PARAMETERS (override INI file):
   --server HOST     SMTP server address
   --port NUMBER     SMTP server port
@@ -152,7 +112,6 @@ SMTP PARAMETERS (override INI file):
   --from EMAIL      From email address
   --to EMAIL        To email address (comma-separated for multiple)
   --ssl true|false  Enable SSL
-
 OPTIONS:
   --debug           Enable debug mode with console output
   --subject TEXT    Email subject text
@@ -162,41 +121,36 @@ OPTIONS:
   --cc EMAILS       Carbon copy (comma-separated emails)
   --bcc EMAILS      Blind carbon copy (comma-separated emails)
   --importance LEVEL Set importance (high/normal/low)
-
 UTILITIES:
   --help, -h, /?   Show this help
-  --version, -v    Show version information
   --encrypt-password PASS  Encrypt password for INI file
   --reset-config    Reset configuration files  
-
 TEMPLATE VARIABLES:
-  {{host}} {{user}} {{timestamp}} {{time}} {{date}}
-
+  {host} {user} {timestamp} {time} {date}
 EXAMPLES:
-  emailer --debug --subject ""Alert from {{host}}"" --body ""User {{user}} at {{timestamp}}""
+  emailer --debug --subject ""Alert from {host}"" --body ""User {user} at {timestamp}""
   emailer --server smtp.domain.ru --port 587 --username user --password pass --from sender@domain.ru --to recipient@domain.ru --ssl true
-  emailer --attach emailer.log --subject ""Log file from {{host}}"" --body ""Generated at {{timestamp}}""
+  emailer --attach emailer.log --subject ""Log file from {host}"" --body ""Generated at {timestamp}""
   emailer --to ""user1@domain.com,user2@domain.com"" --cc ""manager@domain.com"" --bcc ""archive@domain.com"" --importance high
   emailer --no-sound --debug
-  emailer --version
 ";
             Console.WriteLine(helpText);
         }
 
         private void EncryptPasswordCommand(string[] args)
         {
-            try // Password encryption command start
+            try
             {
                 ShowConsole();
 
                 int passwordIndex = Array.IndexOf(args, "--encrypt-password") + 1;
-                if (passwordIndex < args.Length && !args[passwordIndex].StartsWith("--")) // Valid password parameter check start
+                if (passwordIndex < args.Length && !args[passwordIndex].StartsWith("--"))
                 {
                     string password = args[passwordIndex];
                     string encrypted = EncryptPassword(password);
 
                     Console.WriteLine("Password encryption result:");
-                    Console.WriteLine($"Original: {new string('*', password.Length)}");
+                    Console.WriteLine($"Original: {password}");
                     Console.WriteLine($"Encrypted: {encrypted}");
                     Console.WriteLine("");
                     Console.WriteLine("To use in emailer.ini:");
@@ -207,39 +161,39 @@ EXAMPLES:
                     Console.WriteLine("For security, consider using proper encryption tools.");
 
                     UnifiedLog($"Password encryption command executed - encrypted {password.Length} characters safely", "INFO");
-                } // Valid password parameter check end
-                else // Invalid password parameter start
+                }
+                else
                 {
                     Console.WriteLine("ERROR: No password provided for encryption");
                     Console.WriteLine(@"Usage: emailer --encrypt-password ""your_password""");
-                } // Invalid password parameter end
-            } // Password encryption command end
-            catch (Exception ex) // Password encryption exception handling start
+                }
+            }
+            catch (Exception ex)
             {
                 Console.WriteLine($"ERROR during password encryption: {ex.Message}");
                 UnifiedLog($"ERROR during password encryption: {ex.Message}", "ERROR");
-            } // Password encryption exception handling end
+            }
         }
 
         private void ResetConfigurationCommand()
         {
-            try // Reset configuration command start
+            try
             {
                 ShowConsole();
 
                 Console.WriteLine("Resetting configuration files...");
 
-                if (File.Exists(_iniPath)) // INI file deletion check start
+                if (File.Exists(_iniPath))
                 {
                     File.Delete(_iniPath);
                     Console.WriteLine("Deleted: emailer.ini");
-                } // INI file deletion check end
+                }
 
-                if (File.Exists(_logPath)) // Log file deletion check start
+                if (File.Exists(_logPath))
                 {
                     File.Delete(_logPath);
                     Console.WriteLine("Deleted: emailer.log");
-                } // Log file deletion check end
+                }
 
                 CreateDefaultIniFile();
                 Console.WriteLine("Created: emailer.ini (default configuration)");
@@ -252,92 +206,92 @@ EXAMPLES:
                 Console.WriteLine("You MUST edit emailer.ini and configure your SMTP settings before use.");
 
                 UnifiedLog("Configuration reset command executed - all environment files recreated", "INFO");
-            } // Reset configuration command end
-            catch (Exception ex) // Reset configuration exception handling start
+            }
+            catch (Exception ex)
             {
                 Console.WriteLine($"ERROR during configuration reset: {ex.Message}");
                 UnifiedLog($"ERROR during configuration reset: {ex.Message}", "ERROR");
-            } // Reset configuration exception handling end
+            }
         }
 
         private void ParseArguments(string[] args)
         {
-            for (int i = 0; i < args.Length; i++) // Arguments parsing loop start
+            for (int i = 0; i < args.Length; i++)
             {
-                switch (args[i]) // Argument switch start
+                switch (args[i])
                 {
                     case "--debug":
                         _debug = true;
                         break;
                     case "--subject":
-                        if (i + 1 < args.Length) // Subject parameter check start
+                        if (i + 1 < args.Length)
                             _subject = args[++i];
-                        break; // Subject parameter check end
+                        break;
                     case "--body":
-                        if (i + 1 < args.Length) // Body parameter check start
+                        if (i + 1 < args.Length)
                             _body = args[++i];
-                        break; // Body parameter check end
+                        break;
                     case "--no-sound":
                         _enableSound = false;
                         break;
                     case "--attach":
-                        if (i + 1 < args.Length) // Attachment parameter check start
+                        if (i + 1 < args.Length)
                             _attachmentPath = args[++i];
-                        break; // Attachment parameter check end
+                        break;
                     case "--server":
-                        if (i + 1 < args.Length) // Server parameter check start
+                        if (i + 1 < args.Length)
                             _cmdServer = args[++i];
-                        break; // Server parameter check end
+                        break;
                     case "--port":
-                        if (i + 1 < args.Length) // Port parameter check start
+                        if (i + 1 < args.Length)
                             _cmdPort = args[++i];
-                        break; // Port parameter check end
+                        break;
                     case "--username":
-                        if (i + 1 < args.Length) // Username parameter check start
+                        if (i + 1 < args.Length)
                             _cmdUsername = args[++i];
-                        break; // Username parameter check end
+                        break;
                     case "--password":
-                        if (i + 1 < args.Length) // Password parameter check start
+                        if (i + 1 < args.Length)
                             _cmdPassword = args[++i];
-                        break; // Password parameter check end
+                        break;
                     case "--from":
-                        if (i + 1 < args.Length) // From parameter check start
+                        if (i + 1 < args.Length)
                             _cmdFrom = args[++i];
-                        break; // From parameter check end
+                        break;
                     case "--to":
-                        if (i + 1 < args.Length) // To parameter check start
+                        if (i + 1 < args.Length)
                             _cmdTo = args[++i];
-                        break; // To parameter check end
+                        break;
                     case "--ssl":
-                        if (i + 1 < args.Length) // SSL parameter check start
+                        if (i + 1 < args.Length)
                             _cmdSsl = args[++i];
-                        break; // SSL parameter check end
+                        break;
                     case "--cc":
-                        if (i + 1 < args.Length) // CC parameter check start
+                        if (i + 1 < args.Length)
                             _cmdCc = args[++i];
-                        break; // CC parameter check end
+                        break;
                     case "--bcc":
-                        if (i + 1 < args.Length) // BCC parameter check start
+                        if (i + 1 < args.Length)
                             _cmdBcc = args[++i];
-                        break; // BCC parameter check end
+                        break;
                     case "--importance":
-                        if (i + 1 < args.Length) // Importance parameter check start
+                        if (i + 1 < args.Length)
                             _cmdImportance = args[++i].ToLower();
-                        break; // Importance parameter check end
-                } // Argument switch end
-            } // Arguments parsing loop end
+                        break;
+                }
+            }
         }
 
         private void ShowConsole()
         {
-            try // Console allocation start
+            try
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) // Windows platform check start
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     AllocConsole();
-                } // Windows platform check end
-            } // Console allocation end
-            catch { } // Console allocation exception handling
+                }
+            }
+            catch { }
         }
 
         [DllImport("kernel32.dll")]
@@ -345,40 +299,36 @@ EXAMPLES:
 
         private void PlayAlertSound()
         {
-            if (!_enableSound) // Sound enabled check start
+            if (!_enableSound)
                 return;
-            // Sound enabled check end
 
-            try // Sound playback start
+            try
             {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) // Windows sound check start
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     Console.Beep(1000, 500);
-                } // Windows sound check end
-            } // Sound playback end
-            catch { } // Sound playback exception handling
+                }
+            }
+            catch { }
         }
 
-        /// <summary>
-        /// Check if file is locked by another process
-        /// </summary>
         private bool IsFileLocked(string filePath)
         {
-            try // File lock check start
+            try
             {
                 using (FileStream stream = File.Open(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
                 {
                     return false;
                 }
-            } // File lock check end
-            catch (IOException) // File IO exception handling start
+            }
+            catch (IOException)
             {
                 return true;
-            } // File IO exception handling end
-            catch // Other exceptions handling start
+            }
+            catch
             {
                 return false;
-            } // Other exceptions handling end
+            }
         }
 
         private bool IsFileBusy(string filePath)
@@ -386,96 +336,84 @@ EXAMPLES:
             return IsFileLocked(filePath);
         }
 
-        /// <summary>
-        /// Notify about file lock with protection against recursive calls
-        /// </summary>
         private void NotifyFileLock(string filePath, string fileType)
         {
-            if (_inFileLockNotification) // Recursion protection check start
+            if (_inFileLockNotification)
                 return;
-            // Recursion protection check end
 
             _inFileLockNotification = true;
-            try // File lock notification start
+            try
             {
                 string warning = $"{fileType} file {filePath} is locked by another process!";
                 string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
                 string alarmMessage = $"[{timestamp}] [ALARM] {warning}";
 
                 // Write to console
-                if (_debug) // Debug mode check start
+                if (_debug)
                 {
                     Console.WriteLine(alarmMessage);
-                } // Debug mode check end
+                }
 
                 // Write to log file with direct file access to avoid recursion
-                try // Direct log write start
+                try
                 {
                     using (var writer = new StreamWriter(_logPath, true, Encoding.UTF8))
                     {
                         writer.WriteLine(alarmMessage);
                     }
-                } // Direct log write end
-                catch // Direct log write exception handling start
+                }
+                catch
                 {
                     // If we can't write to log, at least show console warning
                     ShowWarning(warning);
-                } // Direct log write exception handling end
+                }
 
                 ShowWarning(warning);
                 PlayAlertSound();
 
                 // Store warning for potential email body inclusion
                 _fileLockWarnings.Add(warning);
-            } // File lock notification end
-            finally // File lock notification cleanup start
+            }
+            finally
             {
                 _inFileLockNotification = false;
-            } // File lock notification cleanup end
+            }
         }
 
-        /// <summary>
-        /// Check if password is encrypted using Base64 encoding
-        /// </summary>
         private bool IsPasswordEncrypted(string password)
         {
-            if (string.IsNullOrEmpty(password)) // Empty password check start
+            if (string.IsNullOrEmpty(password))
                 return false;
-            // Empty password check end
 
-            // Check if string has valid Base64 format
             if (password.Length % 4 == 0 &&
-                Regex.IsMatch(password, @"^[a-zA-Z0-9\+/]*={0,3}$")) // Base64 format check start
+                Regex.IsMatch(password, @"^[a-zA-Z0-9\+/]*={0,3}$"))
             {
-                try // Base64 decoding attempt start
+                try
                 {
                     byte[] data = Convert.FromBase64String(password);
                     string decoded = Encoding.UTF8.GetString(data);
-                    // Check if decoded content is different from original
-                    return !string.Equals(decoded, password, StringComparison.Ordinal);
-                } // Base64 decoding attempt end
-                catch // Base64 decoding exception handling start
+                    return decoded != password;
+                }
+                catch
                 {
                     return false;
-                } // Base64 decoding exception handling end
-            } // Base64 format check end
+                }
+            }
             return false;
         }
 
         private string GetPasswordType(string password)
         {
-            if (password == "yourpassword") // Default password check start
+            if (password == "yourpassword")
                 return "default";
-            // Default password check end
 
             return IsPasswordEncrypted(password) ? "encrypted" : "plain";
         }
 
         private bool ParseBool(string value)
         {
-            if (string.IsNullOrEmpty(value)) // Empty value check start
+            if (string.IsNullOrEmpty(value))
                 return false;
-            // Empty value check end
 
             string trimmed = value.Trim().ToLower();
             return trimmed == "true" || trimmed == "t" || trimmed == "1" || trimmed == "yes" || trimmed == "y";
@@ -483,12 +421,11 @@ EXAMPLES:
 
         private MailPriority ParseImportance(string importance)
         {
-            if (string.IsNullOrEmpty(importance)) // Empty importance check start
+            if (string.IsNullOrEmpty(importance))
                 return MailPriority.Normal;
-            // Empty importance check end
 
             string trimmed = importance.Trim().ToLower();
-            switch (trimmed) // Importance switch start
+            switch (trimmed)
             {
                 case "high":
                     return MailPriority.High;
@@ -496,60 +433,57 @@ EXAMPLES:
                     return MailPriority.Low;
                 default:
                     return MailPriority.Normal;
-            } // Importance switch end
+            }
         }
 
         private List<string> ParseEmailList(string emailList)
         {
             var emails = new List<string>();
-            if (string.IsNullOrEmpty(emailList)) // Empty email list check start
+            if (string.IsNullOrEmpty(emailList))
                 return emails;
-            // Empty email list check end
 
             var parts = emailList.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-            foreach (var part in parts) // Email parts processing loop start
+            foreach (var part in parts)
             {
                 var email = part.Trim();
-                if (!string.IsNullOrEmpty(email) && IsValidEmail(email)) // Valid email check start
+                if (!string.IsNullOrEmpty(email) && IsValidEmail(email))
                 {
                     emails.Add(email);
-                } // Valid email check end
-            } // Email parts processing loop end
+                }
+            }
             return emails;
         }
 
         private bool IsValidEmail(string email)
         {
-            if (string.IsNullOrEmpty(email)) // Empty email check start
+            if (string.IsNullOrEmpty(email))
                 return false;
-            // Empty email check end
 
-            try // Email validation start
+            try
             {
                 var addr = new System.Net.Mail.MailAddress(email);
                 return addr.Address == email;
-            } // Email validation end
-            catch // Email validation exception handling start
+            }
+            catch
             {
                 return false;
-            } // Email validation exception handling end
+            }
         }
 
         private void UnifiedLog(string message, string level = "INFO")
         {
-            if (_inFileLockNotification && level == "ALARM") // File lock notification check start
+            if (_inFileLockNotification && level == "ALARM")
                 return;
-            // File lock notification check end
 
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
             string formattedMessage = $"[{timestamp}] [{level}] {message}";
 
             WriteToLogFile(formattedMessage);
 
-            if (_debug) // Debug mode check start
+            if (_debug)
             {
                 Console.WriteLine(formattedMessage);
-            } // Debug mode check end
+            }
         }
 
         private void SendEmail()
@@ -557,99 +491,99 @@ EXAMPLES:
             string appDir = AppDomain.CurrentDomain.BaseDirectory;
             _iniPath = Path.Combine(appDir, "emailer.ini");
 
-            if (File.Exists(_iniPath) && IsFileLocked(_iniPath)) // INI file lock check start
+            if (File.Exists(_iniPath) && IsFileLocked(_iniPath))
             {
                 NotifyFileLock(_iniPath, "INI");
                 return;
-            } // INI file lock check end
+            }
 
-            if (File.Exists(_logPath) && IsFileLocked(_logPath)) // Log file lock check start
+            if (File.Exists(_logPath) && IsFileLocked(_logPath))
             {
                 NotifyFileLock(_logPath, "Log");
-            } // Log file lock check end
+            }
 
             var settings = ReadSettings();
-            if (settings == null) // Settings validation check start
+            if (settings == null)
             {
                 UnifiedLog("Cannot read settings", "ERROR");
                 return;
-            } // Settings validation check end
+            }
 
             ApplyCommandLineOverrides(settings);
 
-            if (settings.Password == "yourpassword" && string.IsNullOrEmpty(_cmdPassword)) // Default password check start
+            if (settings.Password == "yourpassword" && string.IsNullOrEmpty(_cmdPassword))
             {
                 string error = "Password not configured - you MUST edit emailer.ini and change 'yourpassword' to your actual password";
                 UnifiedLog(error, "ERROR");
                 ShowWarning("PASSWORD NOT CONFIGURED: Edit emailer.ini and change 'yourpassword'");
                 PlayAlertSound();
                 return;
-            } // Default password check end
+            }
 
             string actualPassword = settings.Password;
             bool passwordWasEncrypted = IsPasswordEncrypted(settings.Password);
             string currentPasswordType = GetPasswordType(settings.Password);
 
-            try // Email sending start
+            try
             {
-                if (passwordWasEncrypted) // Encrypted password handling start
+                if (passwordWasEncrypted)
                 {
-                    try // Password decryption start
+                    try
                     {
                         actualPassword = DecryptPassword(settings.Password);
                         UnifiedLog("Password decrypted successfully for SMTP authentication", "INFO");
-                    } // Password decryption end
-                    catch (Exception ex) // Password decryption exception handling start
+                    }
+                    catch (Exception ex)
                     {
                         HandleException("ERROR decrypting password", ex);
                         return;
-                    } // Password decryption exception handling end
-                } // Encrypted password handling end
+                    }
+                }
 
-                using (SmtpClient client = new SmtpClient(settings.SmtpServer, settings.SmtpPort)) // SMTP client using start
+                using (SmtpClient client = new SmtpClient(settings.SmtpServer, settings.SmtpPort))
                 {
                     client.Credentials = new NetworkCredential(settings.Username, actualPassword);
                     client.EnableSsl = settings.EnableSSL;
                     client.Timeout = 30000;
 
-                    using (MailMessage message = new MailMessage()) // Mail message using start
+                    using (MailMessage message = new MailMessage())
                     {
                         message.Priority = ParseImportance(_cmdImportance);
 
                         message.From = new MailAddress(settings.FromEmail);
 
                         var toEmails = ParseEmailList(settings.ToEmail);
-                        if (toEmails.Count == 0) // Recipients validation check start
+                        if (toEmails.Count == 0)
                         {
                             UnifiedLog("No TO recipients specified", "ERROR");
                             return;
-                        } // Recipients validation check end
+                        }
 
-                        foreach (var email in toEmails) // To emails loop start
+                        foreach (var email in toEmails)
                         {
                             message.To.Add(email);
-                        } // To emails loop end
+                        }
 
                         var ccEmails = ParseEmailList(_cmdCc);
-                        foreach (var email in ccEmails) // CC emails loop start
+                        foreach (var email in ccEmails)
                         {
                             message.CC.Add(email);
-                        } // CC emails loop end
+                        }
 
                         var bccEmails = ParseEmailList(_cmdBcc);
-                        foreach (var email in bccEmails) // BCC emails loop start
+                        foreach (var email in bccEmails)
                         {
                             message.Bcc.Add(email);
-                        } // BCC emails loop end
+                        }
 
                         // Build body - add file lock warnings only if attachment failed
                         string baseBody = string.IsNullOrEmpty(_body) ? GetDefaultBody() : ProcessTemplateVariables(_body);
                         string finalBody = baseBody;
 
-                        if (_attachmentFailed && _fileLockWarnings.Count > 0) // Attachment failure check start
+                        if (_attachmentFailed && _fileLockWarnings.Count > 0)
                         {
                             finalBody = baseBody + "\n\nFILE LOCK WARNINGS:\n" + string.Join("\n", _fileLockWarnings);
-                        } // Attachment failure check end
+                        }
 
                         message.Body = finalBody;
 
@@ -661,37 +595,37 @@ EXAMPLES:
                         // Reset attachment failure flag
                         _attachmentFailed = false;
 
-                        if (!string.IsNullOrEmpty(_attachmentPath)) // Attachment processing check start
+                        if (!string.IsNullOrEmpty(_attachmentPath))
                         {
                             bool attachmentSuccess = HandleAttachment(message, _attachmentPath);
-                            if (!attachmentSuccess) // Attachment failure check start
+                            if (!attachmentSuccess)
                             {
                                 _attachmentFailed = true;
-                            } // Attachment failure check end
-                        } // Attachment processing check end
+                            }
+                        }
 
                         client.Send(message);
 
-                        if (!passwordWasEncrypted && string.IsNullOrEmpty(_cmdPassword)) // Password encryption opportunity check start
+                        if (!passwordWasEncrypted && string.IsNullOrEmpty(_cmdPassword))
                         {
-                            if (!IsFileLocked(_iniPath)) // INI file accessibility check start
+                            if (!IsFileLocked(_iniPath))
                             {
-                                if (EncryptPasswordInIniFile(actualPassword)) // Password encryption success check start
+                                if (EncryptPasswordInIniFile(actualPassword))
                                 {
                                     UnifiedLog("Password successfully encrypted and saved to .ini file", "INFO");
                                     ShowNotification("Password successfully encrypted and saved to INI file");
                                     currentPasswordType = "encrypted";
-                                } // Password encryption success check end
-                                else // Password encryption failure start
+                                }
+                                else
                                 {
                                     UnifiedLog("Failed to encrypt password in INI file", "ERROR");
-                                } // Password encryption failure end
-                            } // INI file accessibility check end
-                            else // INI file locked start
+                                }
+                            }
+                            else
                             {
                                 NotifyFileLock(_iniPath, "INI");
-                            } // INI file locked end
-                        } // Password encryption opportunity check end
+                            }
+                        }
 
                         string logSubject = string.IsNullOrEmpty(_subject) ? "<null>" : _subject;
                         string logBody = string.IsNullOrEmpty(_body) ? "<null>" : _body;
@@ -703,75 +637,75 @@ EXAMPLES:
 
                         string successLog = $"SMTP-ok: {settings.SmtpServer}:{settings.SmtpPort} SSL:{settings.EnableSSL} {settings.Username} Pass:{currentPasswordType} | {settings.FromEmail} -> {settings.ToEmail}{ccInfo}{bccInfo}{importanceInfo} | Subject: {logSubject} | Body: {logBody}{attachmentInfo}";
                         UnifiedLog(successLog, "INFO");
-                    } // Mail message using end
-                } // SMTP client using end
-            } // Email sending end
-            catch (SmtpException ex) when (IsAuthenticationError(ex)) // SMTP authentication exception handling start
+                    }
+                }
+            }
+            catch (SmtpException ex) when (IsAuthenticationError(ex))
             {
-                if (passwordWasEncrypted && string.IsNullOrEmpty(_cmdPassword)) // Encrypted password failure check start
+                if (passwordWasEncrypted && string.IsNullOrEmpty(_cmdPassword))
                 {
-                    if (!IsFileLocked(_iniPath)) // INI file accessibility check start
+                    if (!IsFileLocked(_iniPath))
                     {
-                        if (RevertToUnencryptedPassword(actualPassword)) // Password reversion success check start
+                        if (RevertToUnencryptedPassword(actualPassword))
                         {
                             UnifiedLog("Password reverted to unencrypted format due to authentication failure", "INFO");
                             ShowWarning("Password reverted to unencrypted format due to authentication failure");
-                        } // Password reversion success check end
-                        else // Password reversion failure start
+                        }
+                        else
                         {
                             UnifiedLog("Failed to revert password to unencrypted format", "ERROR");
-                        } // Password reversion failure end
-                    } // INI file accessibility check end
-                    else // INI file locked start
+                        }
+                    }
+                    else
                     {
                         NotifyFileLock(_iniPath, "INI");
-                    } // INI file locked end
-                } // Encrypted password failure check end
+                    }
+                }
                 UnifiedLog("SMTP AUTHENTICATION - Invalid password", "ERROR");
                 HandleException("SMTP AUTHENTICATION - Invalid password", ex);
                 PlayAlertSound();
-            } // SMTP authentication exception handling end
-            catch (SmtpException ex) // SMTP general exception handling start
+            }
+            catch (SmtpException ex)
             {
                 UnifiedLog("SMTP SERVER ERROR", "ERROR");
                 HandleException("SMTP SERVER ERROR", ex);
                 PlayAlertSound();
-            } // SMTP general exception handling end
-            catch (Exception ex) // General exception handling start
+            }
+            catch (Exception ex)
             {
                 UnifiedLog("UNEXPECTED ERROR during email sending", "ERROR");
                 HandleException("UNEXPECTED ERROR during email sending", ex);
                 PlayAlertSound();
-            } // General exception handling end
+            }
         }
 
         private bool HandleAttachment(MailMessage message, string filePath)
         {
-            try // Attachment handling start
+            try
             {
                 string fullPath = Path.GetFullPath(filePath);
 
-                if (!File.Exists(fullPath)) // File existence check start
+                if (!File.Exists(fullPath))
                 {
                     UnifiedLog($"Attachment file not found: {fullPath}", "ERROR");
                     return false;
-                } // File existence check end
+                }
 
-                try // Direct attachment attempt start
+                try
                 {
                     Attachment attachment = new Attachment(fullPath);
                     message.Attachments.Add(attachment);
                     UnifiedLog($"Attachment added: {fullPath} ({new FileInfo(fullPath).Length} bytes)", "INFO");
                     return true;
-                } // Direct attachment attempt end
-                catch (IOException ioEx) when (ioEx.Message.Contains("used by another process") || ioEx.Message.Contains("locked") || ioEx.Message.Contains("busy")) // File locked exception handling start
+                }
+                catch (IOException ioEx) when (ioEx.Message.Contains("used by another process") || ioEx.Message.Contains("locked") || ioEx.Message.Contains("busy"))
                 {
                     UnifiedLog($"File {fullPath} is busy/locked, creating temporary copy...", "INFO");
 
                     string tempFile = CreateTemporaryCopy(fullPath);
-                    if (tempFile != null) // Temporary copy success check start
+                    if (tempFile != null)
                     {
-                        try // Temporary attachment attempt start
+                        try
                         {
                             Attachment attachment = new Attachment(tempFile);
                             message.Attachments.Add(attachment);
@@ -779,36 +713,36 @@ EXAMPLES:
 
                             ScheduleTempFileDeletion(tempFile);
                             return true;
-                        } // Temporary attachment attempt end
-                        catch (Exception ex) // Temporary attachment exception handling start
+                        }
+                        catch (Exception ex)
                         {
                             UnifiedLog($"Failed to attach temporary copy: {ex.Message}", "ERROR");
                             TryDeleteFile(tempFile);
                             return false;
-                        } // Temporary attachment exception handling end
-                    } // Temporary copy success check end
-                    else // Temporary copy failure start
+                        }
+                    }
+                    else
                     {
                         UnifiedLog($"Failed to create temporary copy of {fullPath}", "ERROR");
                         return false;
-                    } // Temporary copy failure end
-                } // File locked exception handling end
-                catch (Exception ex) // General attachment exception handling start
+                    }
+                }
+                catch (Exception ex)
                 {
                     UnifiedLog($"Failed to attach file {fullPath}: {ex.Message}", "ERROR");
                     return false;
-                } // General attachment exception handling end
-            } // Attachment handling end
-            catch (Exception ex) // Attachment outer exception handling start
+                }
+            }
+            catch (Exception ex)
             {
                 UnifiedLog($"Error processing attachment {filePath}: {ex.Message}", "ERROR");
                 return false;
-            } // Attachment outer exception handling end
+            }
         }
 
         private string CreateTemporaryCopy(string originalPath)
         {
-            try // Temporary copy creation start
+            try
             {
                 string tempDir = Path.GetTempPath();
                 string fileName = Path.GetFileName(originalPath);
@@ -816,99 +750,92 @@ EXAMPLES:
 
                 File.Copy(originalPath, tempFile, true);
                 return tempFile;
-            } // Temporary copy creation end
-            catch (Exception ex) // Temporary copy exception handling start
+            }
+            catch (Exception ex)
             {
                 UnifiedLog($"Failed to create temporary copy: {ex.Message}", "ERROR");
                 return null;
-            } // Temporary copy exception handling end
+            }
         }
 
         private void ScheduleTempFileDeletion(string tempFile)
         {
-            try // Temp file deletion scheduling start
+            try
             {
                 Task.Run(async () =>
                 {
-                    await Task.Delay(5000); // Wait 5 seconds for email to be sent
+                    await Task.Delay(5000);
                     TryDeleteFile(tempFile);
                 });
-            } // Temp file deletion scheduling end
-            catch (Exception ex) // Temp file scheduling exception handling start
+            }
+            catch (Exception ex)
             {
                 UnifiedLog($"Failed to schedule temp file deletion: {ex.Message}", "DEBUG");
-            } // Temp file scheduling exception handling end
+            }
         }
 
         private void TryDeleteFile(string filePath)
         {
-            try // File deletion attempt start
+            try
             {
-                if (File.Exists(filePath)) // File existence check start
+                if (File.Exists(filePath))
                 {
                     File.Delete(filePath);
                     UnifiedLog($"Temporary file deleted: {filePath}", "DEBUG");
-                } // File existence check end
-            } // File deletion attempt end
-            catch (Exception ex) // File deletion exception handling start
+                }
+            }
+            catch (Exception ex)
             {
                 UnifiedLog($"Failed to delete temporary file {filePath}: {ex.Message}", "DEBUG");
-            } // File deletion exception handling end
+            }
         }
 
         private void ApplyCommandLineOverrides(EmailSettings settings)
         {
-            if (!string.IsNullOrEmpty(_cmdServer)) // Server override check start
+            if (!string.IsNullOrEmpty(_cmdServer))
                 settings.SmtpServer = _cmdServer;
-            // Server override check end
 
-            if (!string.IsNullOrEmpty(_cmdPort) && int.TryParse(_cmdPort, out int port)) // Port override check start
+            if (!string.IsNullOrEmpty(_cmdPort) && int.TryParse(_cmdPort, out int port))
                 settings.SmtpPort = port;
-            // Port override check end
 
-            if (!string.IsNullOrEmpty(_cmdUsername)) // Username override check start
+            if (!string.IsNullOrEmpty(_cmdUsername))
                 settings.Username = _cmdUsername;
-            // Username override check end
 
-            if (!string.IsNullOrEmpty(_cmdPassword)) // Password override check start
+            if (!string.IsNullOrEmpty(_cmdPassword))
                 settings.Password = _cmdPassword;
-            // Password override check end
 
-            if (!string.IsNullOrEmpty(_cmdFrom)) // From override check start
+            if (!string.IsNullOrEmpty(_cmdFrom))
                 settings.FromEmail = _cmdFrom;
-            // From override check end
 
-            if (!string.IsNullOrEmpty(_cmdTo)) // To override check start
+            if (!string.IsNullOrEmpty(_cmdTo))
                 settings.ToEmail = _cmdTo;
-            // To override check end
 
-            if (!string.IsNullOrEmpty(_cmdSsl)) // SSL override check start
+            if (!string.IsNullOrEmpty(_cmdSsl))
                 settings.EnableSSL = ParseBool(_cmdSsl);
-            // SSL override check end
         }
 
         private void ShowWarning(string message)
         {
-            try // Warning display start
+            try
             {
                 ShowConsole();
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine($"[WARNING] {DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}");
                 Console.ResetColor();
-            } // Warning display end
-            catch { } // Warning display exception handling
+            }
+            catch { }
         }
 
         private void ShowNotification(string message)
         {
-            try // Notification display start
+            try
             {
                 ShowConsole();
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"[INFO] {DateTime.Now:yyyy-MM-dd HH:mm:ss} - {message}");
                 Console.ResetColor();
-            } // Notification display end
-            catch { } // Notification display exception handling
+            }
+            catch { }
         }
 
         private bool IsAuthenticationError(SmtpException ex)
@@ -922,63 +849,63 @@ EXAMPLES:
 
         private bool RevertToUnencryptedPassword(string password)
         {
-            try // Password reversion start
+            try
             {
                 var lines = File.ReadAllLines(_iniPath);
                 var newLines = new List<string>();
                 bool passwordUpdated = false;
                 bool encryptionDisabled = false;
 
-                foreach (var line in lines) // INI file lines processing loop start
+                foreach (var line in lines)
                 {
                     var trimmedLine = line.Trim();
                     var parts = trimmedLine.Split(new[] { '=' }, 2);
 
-                    if (parts.Length == 2) // Valid key-value pair check start
+                    if (parts.Length == 2)
                     {
                         var key = parts[0].Trim().ToLower();
                         var value = parts[1].Trim();
 
-                        if (key == "password") // Password key check start
+                        if (key == "password")
                         {
                             newLines.Add($"Password = {password}");
                             passwordUpdated = true;
-                        } // Password key check end
-                        else if (key == "passwordisencrypted") // Encryption flag check start
+                        }
+                        else if (key == "passwordisencrypted")
                         {
                             newLines.Add("PasswordIsEncrypted = False");
                             encryptionDisabled = true;
-                        } // Encryption flag check end
-                        else // Other keys start
+                        }
+                        else
                         {
                             newLines.Add(line);
-                        } // Other keys end
-                    } // Valid key-value pair check end
-                    else // Invalid line start
+                        }
+                    }
+                    else
                     {
                         newLines.Add(line);
-                    } // Invalid line end
-                } // INI file lines processing loop end
+                    }
+                }
 
-                if (passwordUpdated && encryptionDisabled) // Successful reversion check start
+                if (passwordUpdated && encryptionDisabled)
                 {
                     File.WriteAllLines(_iniPath, newLines);
 
                     var newSettings = ReadSettings();
                     return newSettings != null && !IsPasswordEncrypted(newSettings.Password);
-                } // Successful reversion check end
+                }
                 return false;
-            } // Password reversion end
-            catch (Exception ex) // Password reversion exception handling start
+            }
+            catch (Exception ex)
             {
                 HandleException("ERROR reverting password to unencrypted", ex);
                 return false;
-            } // Password reversion exception handling end
+            }
         }
 
         private bool EncryptPasswordInIniFile(string password)
         {
-            try // Password encryption in INI start
+            try
             {
                 var lines = File.ReadAllLines(_iniPath);
                 var newLines = new List<string>();
@@ -987,21 +914,307 @@ EXAMPLES:
 
                 string encryptedPassword = EncryptPassword(password);
 
-                foreach (var line in lines) // INI file lines processing loop start
+                foreach (var line in lines)
                 {
                     var trimmedLine = line.Trim();
                     var parts = trimmedLine.Split(new[] { '=' }, 2);
 
-                    if (parts.Length == 2) // Valid key-value pair check start
+                    if (parts.Length == 2)
                     {
                         var key = parts[0].Trim().ToLower();
                         var value = parts[1].Trim();
 
-                        if (key == "password") // Password key check start
+                        if (key == "password")
                         {
                             newLines.Add($"Password = {encryptedPassword}");
                             passwordUpdated = true;
-                        } // Password key check end
-                        else if (key == "passwordisencrypted") // Encryption flag check start
+                        }
+                        else if (key == "passwordisencrypted")
                         {
-                            newLines.Add("
+                            newLines.Add("PasswordIsEncrypted = True");
+                            encryptionEnabled = true;
+                        }
+                        else
+                        {
+                            newLines.Add(line);
+                        }
+                    }
+                    else
+                    {
+                        newLines.Add(line);
+                    }
+                }
+
+                if (passwordUpdated && encryptionEnabled)
+                {
+                    File.WriteAllLines(_iniPath, newLines);
+
+                    var newSettings = ReadSettings();
+                    return newSettings != null && IsPasswordEncrypted(newSettings.Password);
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                HandleException("ERROR encrypting password in INI file", ex);
+                return false;
+            }
+        }
+
+        private string ProcessTemplateVariables(string text)
+        {
+            return text
+                .Replace("{host}", Environment.MachineName)
+                .Replace("{user}", Environment.UserName)
+                .Replace("{timestamp}", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))
+                .Replace("{time}", DateTime.Now.ToString("HH:mm:ss"))
+                .Replace("{date}", DateTime.Now.ToString("yyyy-MM-dd"));
+        }
+
+        private string GetDefaultBody()
+        {
+            return $"Notification from Your Emailer\nHost: {Environment.MachineName}\nUser: {Environment.UserName}\nTime: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+        }
+
+        private EmailSettings ReadSettings()
+        {
+            try
+            {
+                string appDir = AppDomain.CurrentDomain.BaseDirectory;
+                _iniPath = Path.Combine(appDir, "emailer.ini");
+
+                if (!File.Exists(_iniPath))
+                {
+                    if (HasRequiredCommandLineParameters())
+                    {
+                        UnifiedLog("INI file not found, using command line parameters", "INFO");
+                        return CreateSettingsFromCommandLine();
+                    }
+
+                    UnifiedLog("INI file not found, creating default configuration", "INFO");
+                    CreateDefaultIniFile();
+                    UnifiedLog("Default INI file created. You MUST edit emailer.ini and configure your SMTP settings before use.", "INFO");
+                    ShowWarning("DEFAULT INI FILE CREATED - YOU MUST EDIT emailer.ini AND CONFIGURE SETTINGS");
+                    return null;
+                }
+
+                var lines = File.ReadAllLines(_iniPath);
+                var settings = new EmailSettings();
+                int validSettings = 0;
+
+                foreach (var line in lines)
+                {
+                    var trimmedLine = line.Trim();
+                    if (string.IsNullOrEmpty(trimmedLine) || trimmedLine.StartsWith(";"))
+                        continue;
+
+                    var parts = trimmedLine.Split(new[] { '=' }, 2);
+                    if (parts.Length == 2)
+                    {
+                        var key = parts[0].Trim().ToLower();
+                        var value = parts[1].Trim();
+
+                        switch (key)
+                        {
+                            case "username":
+                                settings.Username = value;
+                                validSettings++;
+                                break;
+                            case "password":
+                                settings.Password = value;
+                                validSettings++;
+                                break;
+                            case "passwordisencrypted":
+                                settings.PasswordIsEncrypted = ParseBool(value);
+                                validSettings++;
+                                break;
+                            case "smtpserver":
+                                settings.SmtpServer = value;
+                                validSettings++;
+                                break;
+                            case "smtpport":
+                                if (int.TryParse(value, out int port))
+                                {
+                                    settings.SmtpPort = port;
+                                    validSettings++;
+                                }
+                                break;
+                            case "fromemail":
+                                settings.FromEmail = value;
+                                validSettings++;
+                                break;
+                            case "toemail":
+                                settings.ToEmail = value;
+                                validSettings++;
+                                break;
+                            case "enablessl":
+                                settings.EnableSSL = ParseBool(value);
+                                validSettings++;
+                                break;
+                        }
+                    }
+                }
+
+                if (validSettings < 6 && !HasRequiredCommandLineParameters())
+                {
+                    UnifiedLog("Invalid INI file format - missing required settings", "ERROR");
+                    return null;
+                }
+
+                return settings;
+            }
+            catch (Exception ex)
+            {
+                HandleException("ERROR reading configuration", ex);
+                return null;
+            }
+        }
+
+        private bool HasRequiredCommandLineParameters()
+        {
+            return !string.IsNullOrEmpty(_cmdServer) &&
+                   !string.IsNullOrEmpty(_cmdPort) &&
+                   !string.IsNullOrEmpty(_cmdUsername) &&
+                   !string.IsNullOrEmpty(_cmdPassword) &&
+                   !string.IsNullOrEmpty(_cmdFrom) &&
+                   !string.IsNullOrEmpty(_cmdTo);
+        }
+
+        private EmailSettings CreateSettingsFromCommandLine()
+        {
+            var settings = new EmailSettings();
+
+            settings.SmtpServer = _cmdServer;
+
+            if (int.TryParse(_cmdPort, out int port))
+                settings.SmtpPort = port;
+
+            settings.Username = _cmdUsername;
+            settings.Password = _cmdPassword;
+            settings.FromEmail = _cmdFrom;
+            settings.ToEmail = _cmdTo;
+            settings.EnableSSL = ParseBool(_cmdSsl);
+
+            return settings;
+        }
+
+        private string EncryptPassword(string password)
+        {
+            byte[] data = Encoding.UTF8.GetBytes(password);
+            return Convert.ToBase64String(data);
+        }
+
+        private string DecryptPassword(string encryptedPassword)
+        {
+            try
+            {
+                byte[] data = Convert.FromBase64String(encryptedPassword);
+                return Encoding.UTF8.GetString(data);
+            }
+            catch
+            {
+                throw new Exception("Failed to decrypt password - invalid format");
+            }
+        }
+
+        private void CreateDefaultIniFile()
+        {
+            try
+            {
+                var defaultContent = @"
+; Emailer Configuration Settings - OPEN SOURCE Application
+; Update these values before using the application
+; This is open source software: all functionality is publicly verifiable
+Password = yourpassword
+PasswordIsEncrypted = False
+Username = DOMAIN\user
+SmtpServer = mail.domain.ru
+SmtpPort = 587
+FromEmail = account@domain.ru
+ToEmail = account@domain.ru
+EnableSSL = True
+".TrimStart();
+
+                File.WriteAllText(_iniPath, defaultContent, Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                HandleException("ERROR creating default INI file", ex);
+            }
+        }
+
+        private void HandleException(string context, Exception ex)
+        {
+            if (!context.StartsWith("ERROR"))
+            {
+                UnifiedLog(context, "ERROR");
+            }
+
+            UnifiedLog($"EXCEPTION TYPE: {ex.GetType().FullName}", "DEBUG");
+            UnifiedLog($"MESSAGE: {ex.Message}", "DEBUG");
+            UnifiedLog($"STACK TRACE: {ex.StackTrace}", "DEBUG");
+
+            if (ex.InnerException != null)
+            {
+                UnifiedLog($"INNER EXCEPTION: {ex.InnerException.GetType().FullName}", "DEBUG");
+                UnifiedLog($"INNER MESSAGE: {ex.InnerException.Message}", "DEBUG");
+                UnifiedLog($"INNER STACK TRACE: {ex.InnerException.StackTrace}", "DEBUG");
+            }
+
+            if (ex is SmtpException smtpEx)
+            {
+                UnifiedLog($"SMTP STATUS CODE: {smtpEx.StatusCode}", "DEBUG");
+            }
+
+            if (_debug)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"\n=== EXCEPTION DETAILS ===");
+                Console.WriteLine($"Context: {context}");
+                Console.WriteLine($"Type: {ex.GetType().FullName}");
+                Console.WriteLine($"Message: {ex.Message}");
+                Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"Inner Exception: {ex.InnerException.Message}");
+                }
+                Console.WriteLine("========================\n");
+                Console.ResetColor();
+            }
+        }
+
+        private void WriteToLogFile(string message)
+        {
+            if (_inFileLockNotification)
+                return;
+
+            try
+            {
+                if (File.Exists(_logPath) && IsFileLocked(_logPath))
+                {
+                    NotifyFileLock(_logPath, "Log");
+                    return;
+                }
+
+                File.AppendAllText(_logPath, message + Environment.NewLine, Encoding.UTF8);
+            }
+            catch (IOException ioEx) when (ioEx.Message.Contains("locked") || ioEx.Message.Contains("being used"))
+            {
+                NotifyFileLock(_logPath, "Log");
+            }
+            catch { }
+        }
+    }
+
+    public class EmailSettings
+    {
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+        public bool PasswordIsEncrypted { get; set; } = false;
+        public string SmtpServer { get; set; } = "";
+        public int SmtpPort { get; set; } = 587;
+        public string FromEmail { get; set; } = "";
+        public string ToEmail { get; set; } = "";
+        public bool EnableSSL { get; set; } = true;
+    }
+}
