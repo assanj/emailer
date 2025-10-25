@@ -1,0 +1,3 @@
+﻿[2025-10-25 06:37:26.777] [INFO] INI file not found, creating default configuration
+[2025-10-25 06:37:26.822] [INFO] Default INI file created. You MUST edit emailer.ini and configure your SMTP settings before use.
+[2025-10-25 06:37:26.879] [ERROR] Cannot read settings
