@@ -1,5 +1,5 @@
 # Emailer - SMTP Email Sending Utility (cross-platform)
-Thanx a lot to  <a href="https://chat.deepseek.com" target="_blank" >
+📄  Plz see [promt.md](promt.md), thanx a lot to  <a href="https://chat.deepseek.com" target="_blank" >
   <img src="https://upload.wikimedia.org/wikipedia/commons/e/ec/DeepSeek_logo.svg" alt="DeepSeek" height="20">
 </a>
 
