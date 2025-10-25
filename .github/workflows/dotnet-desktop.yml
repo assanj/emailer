@@ -227,18 +227,6 @@ jobs:
         EOF
         chmod +x deb-package/usr/bin/emailer
         
-        # Create desktop file (optional)
-        cat > deb-package/usr/share/applications/emailer.desktop << EOF
-        [Desktop Entry]
-        Name=Emailer
-        Comment=SMTP Email Sending Utility
-        Exec=/usr/bin/emailer
-        Icon=emailer
-        Terminal=false
-        Type=Application
-        Categories=Network;Email;
-        EOF
-        
         echo "DEB package structure created"
         
     - name: Build DEB package
@@ -288,13 +276,12 @@ jobs:
         EOF
         chmod +x AppDir/AppRun
         
-        # Create desktop file
-        cat > AppDir/emailer.desktop << EOF
+        # Create desktop file without icon reference
+        cat > AppDir/emailer.desktop << 'EOF'
         [Desktop Entry]
         Name=Emailer
         Comment=SMTP Email Sending Utility
         Exec=emailer
-        Icon=emailer
         Terminal=true
         Type=Application
         Categories=Network;Email;
@@ -308,7 +295,9 @@ jobs:
         
         # Extract appimagetool first to avoid FUSE issues
         ./appimagetool-x86_64.AppImage --appimage-extract
-        ./squashfs-root/AppRun AppDir emailer-${{ github.ref_name }}-x86_64.AppImage
+        
+        # Create AppImage without icon
+        ./squashfs-root/AppRun --no-appstream AppDir emailer-${{ github.ref_name }}-x86_64.AppImage
         
     - name: Upload AppImage artifact
       uses: actions/upload-artifact@v4
