@@ -1,4 +1,4 @@
-# Emailer - SMTP Email Sending Utility (CROSS-PLATFORM)
+# Emailer - SMTP Email Sending Utility (cross-platform)
 
 ## Download Lastest Release [![Latest Release](https://img.shields.io/github/v/release/assanj/emailer?style=for-the-badge&label=Версия)](https://github.com/assanj/emailer/releases/latest)
 
