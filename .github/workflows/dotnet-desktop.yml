@@ -125,59 +125,44 @@ jobs:
     - name: Publish for Linux
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true --output ./publish-linux
         
-    - name: Install RPM tools
+    - name: Install fpm for easy package creation
       run: |
         sudo apt-get update
-        sudo apt-get install -y rpm
+        sudo apt-get install -y ruby ruby-dev rpm build-essential
+        sudo gem install fpm
         
-    - name: Create RPM package structure
+    - name: Create RPM package using fpm
       run: |
-        mkdir -p rpm-build/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
-        
-        # Copy spec file
-        cp emailer.spec rpm-build/SPECS/
-        
         # Create package structure
-        mkdir -p rpm-build/BUILD/usr/bin
-        mkdir -p rpm-build/BUILD/usr/share/emailer
-        mkdir -p rpm-build/BUILD/usr/share/applications
+        mkdir -p /tmp/emailer-pkg/usr/bin
+        mkdir -p /tmp/emailer-pkg/usr/share/emailer
         
-        # Copy published files
-        cp -r publish-linux/* rpm-build/BUILD/usr/share/emailer/
+        # Copy application files
+        cp -r publish-linux/* /tmp/emailer-pkg/usr/share/emailer/
         
         # Create launcher script
-        cat > rpm-build/BUILD/usr/bin/emailer << EOF
+        cat > /tmp/emailer-pkg/usr/bin/emailer << 'EOF'
         #!/bin/bash
-        exec /usr/share/emailer/emailer "\$@"
+        exec /usr/share/emailer/emailer "$@"
         EOF
-        chmod +x rpm-build/BUILD/usr/bin/emailer
+        chmod +x /tmp/emailer-pkg/usr/bin/emailer
         
-        # Create desktop file
-        cat > rpm-build/BUILD/usr/share/applications/emailer.desktop << EOF
-        [Desktop Entry]
-        Name=Emailer
-        Comment=SMTP Email Sending Utility
-        Exec=emailer
-        Icon=emailer
-        Terminal=true
-        Type=Application
-        Categories=Network;Email;
-        EOF
-        
-    - name: Build RPM package
-      run: |
-        cd rpm-build
-        rpmbuild -bb \
-          --define "_topdir $(pwd)" \
-          --define "_version 1.0.0" \
-          --define "_release ${{ github.run_number }}" \
-          SPECS/emailer.spec
+        # Create RPM package
+        fpm -s dir -t rpm \
+          -n emailer \
+          -v 1.0.0 \
+          --iteration ${{ github.run_number }} \
+          -C /tmp/emailer-pkg \
+          --description "SMTP Email Sending Utility" \
+          --url "https://github.com/assanj/emailer" \
+          --maintainer "Your Name <your-email@example.com>" \
+          usr/
         
     - name: Upload RPM artifact
       uses: actions/upload-artifact@v4
       with:
         name: emailer-rpm-package
-        path: rpm-build/RPMS/*/emailer-*.rpm
+        path: emailer-*.rpm
         retention-days: 30
         
   linux-deb-package:
@@ -216,7 +201,6 @@ jobs:
       run: |
         mkdir -p deb-package/usr/local/bin/emailer
         mkdir -p deb-package/DEBIAN
-        mkdir -p deb-package/usr/share/applications
         
         # Copy published files (including INI)
         cp -r publish-linux/* deb-package/usr/local/bin/emailer/
@@ -242,18 +226,6 @@ jobs:
         EOF
         chmod +x deb-package/usr/bin/emailer
         
-        # Create desktop file (optional)
-        cat > deb-package/usr/share/applications/emailer.desktop << EOF
-        [Desktop Entry]
-        Name=Emailer
-        Comment=SMTP Email Sending Utility
-        Exec=/usr/bin/emailer
-        Icon=emailer
-        Terminal=false
-        Type=Application
-        Categories=Network;Email;
-        EOF
-        
         echo "DEB package structure created"
         
     - name: Build DEB package
@@ -268,8 +240,8 @@ jobs:
         path: emailer_*.deb
         retention-days: 30
         
-  linux-appimage:
-    name: Create AppImage
+  linux-portable:
+    name: Create Linux Portable
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     
@@ -285,45 +257,27 @@ jobs:
     - name: Build
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
         
-    - name: Publish for Linux AppImage
-      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./AppDir
+    - name: Publish for Linux
+      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-linux
         
-    - name: Create simple AppImage structure
+    - name: Create Linux ZIP package with emailer folder
       run: |
-        # Create simple launcher script
-        cat > AppDir/AppRun << 'EOF'
-        #!/bin/bash
-        HERE="$(dirname "$(readlink -f "${0}")")"
-        exec "${HERE}/emailer" "$@"
-        EOF
-        chmod +x AppDir/AppRun
+        # Create emailer folder and copy files
+        mkdir -p emailer
+        cp -r publish-linux/* emailer/
         
-        # Create desktop file
-        cat > AppDir/emailer.desktop << EOF
-        [Desktop Entry]
-        Name=Emailer
-        Comment=SMTP Email Sending Utility
-        Exec=emailer
-        Icon=emailer
-        Terminal=true
-        Type=Application
-        Categories=Network;Email;
-        EOF
+        # Create ZIP with emailer folder inside
+        zip -r emailer-linux-${{ github.ref_name }}.zip emailer/
         
-    - name: Create simple AppImage using appimagetool
-      run: |
-        # Download appimagetool
-        wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
-        chmod +x appimagetool-x86_64.AppImage
+        # Cleanup temp folder
+        rm -rf emailer
+        echo "Linux ZIP package with emailer folder created"
         
-        # Create AppImage
-        ./appimagetool-x86_64.AppImage AppDir emailer-${{ github.ref_name }}-x86_64.AppImage
-        
-    - name: Upload AppImage artifact
+    - name: Upload Linux portable artifact
       uses: actions/upload-artifact@v4
       with:
-        name: emailer-appimage
-        path: emailer-*.AppImage
+        name: emailer-linux-portable
+        path: emailer-linux-*.zip
         retention-days: 30
         
   macos-packages:
@@ -374,7 +328,7 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [build, cross-platform-build, linux-deb-package, linux-rpm-package, linux-appimage, macos-packages]
+    needs: [build, cross-platform-build, linux-deb-package, linux-rpm-package, linux-portable, macos-packages]
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
@@ -405,10 +359,10 @@ jobs:
         name: emailer-rpm-package
         path: ./release-artifacts
         
-    - name: Download AppImage
+    - name: Download Linux portable
       uses: actions/download-artifact@v4
       with:
-        name: emailer-appimage
+        name: emailer-linux-portable
         path: ./release-artifacts
         
     - name: Download macOS packages
@@ -449,7 +403,7 @@ jobs:
           ### Linux
           - `emailer_*.deb` - DEB package (Ubuntu/Debian, amd64)
           - `emailer-*.rpm` - RPM package (Fedora/RHEL/CentOS, x86_64)
-          - `emailer-*.AppImage` - Universal AppImage (all distributions)
+          - `emailer-linux-*.zip` - Portable version (x64)
           
           ### macOS
           - `emailer-macos-${{ github.ref_name }}.zip` - Portable version (x64)
@@ -458,8 +412,8 @@ jobs:
           - **Windows**: Extract ZIP and run `emailer.exe`
           - **Linux DEB**: `sudo dpkg -i emailer_*.deb`
           - **Linux RPM**: `sudo rpm -i emailer-*.rpm` 
-          - **Linux AppImage**: `chmod +x emailer-*.AppImage && ./emailer-*.AppImage`
-          - **macOS**: Extract ZIP and run `emailer`
+          - **Linux Portable**: Extract ZIP and run `./emailer`
+          - **macOS**: Extract ZIP and run `./emailer`
           
           **Configuration:**
           Edit `config.ini` file to configure SMTP settings and defaults.
@@ -469,7 +423,7 @@ jobs:
           ./release-artifacts/emailer-windows-*.zip
           ./release-artifacts/emailer_*.deb
           ./release-artifacts/emailer-*.rpm
-          ./release-artifacts/emailer-*.AppImage
+          ./release-artifacts/emailer-linux-*.zip
           ./release-artifacts/emailer-macos-*.zip
         draft: false
         prerelease: false

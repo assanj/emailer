@@ -1,43 +1,36 @@
-﻿Name:           emailer
+Name:           emailer
 Version:        1.0.0
-Release:        1%{?dist}
+Release:        1
 Summary:        SMTP Email Sending Utility
 
 License:        MIT
 URL:            https://github.com/assanj/emailer
-Source0:        %{name}-%{version}.tar.gz
-
-BuildRequires:  dotnet-sdk-8.0
-Requires:       dotnet-runtime-8.0
 
 %description
 emailer is a cross-platform application for sending emails via SMTP.
 Features include SSL/TLS support, file attachments, and comprehensive logging.
 
 %prep
-%setup -q
 
 %build
-dotnet publish --configuration Release --runtime linux-x64 --self-contained false --output ./publish
 
 %install
-# Создаем структуру каталогов
-mkdir -p %{buildroot}%{_bindir}
-mkdir -p %{buildroot}%{_datadir}/emailer
-mkdir -p %{buildroot}%{_datadir}/applications
+mkdir -p %{buildroot}/usr/bin
+mkdir -p %{buildroot}/usr/share/emailer
+mkdir -p %{buildroot}/usr/share/applications
 
-# Копируем бинарники
-cp -r publish/* %{buildroot}%{_datadir}/emailer/
+# Copy files from build directory
+cp -r %{_builddir}/* %{buildroot}/usr/share/emailer/ 2>/dev/null || :
 
-# Создаем скрипт-обертку для запуска
-cat > %{buildroot}%{_bindir}/emailer << EOF
+# Create launcher script
+cat > %{buildroot}/usr/bin/emailer << 'EOF'
 #!/bin/bash
-exec %{_datadir}/emailer/emailer "\$@"
+exec /usr/share/emailer/emailer "$@"
 EOF
-chmod +x %{buildroot}%{_bindir}/emailer
+chmod +x %{buildroot}/usr/bin/emailer
 
-# Создаем desktop файл
-cat > %{buildroot}%{_datadir}/applications/emailer.desktop << EOF
+# Create desktop file
+cat > %{buildroot}/usr/share/applications/emailer.desktop << 'EOF'
 [Desktop Entry]
 Name=Emailer
 Comment=SMTP Email Sending Utility
@@ -49,11 +42,9 @@ Categories=Network;Email;
 EOF
 
 %files
-%{_bindir}/emailer
-%{_datadir}/emailer/
-%{_datadir}/applications/emailer.desktop
-
-%doc README.md
+/usr/bin/emailer
+/usr/share/emailer/
+/usr/share/applications/emailer.desktop
 
 %changelog
 * Fri Oct 25 2024 Your Name <your-email@example.com> - 1.0.0-1

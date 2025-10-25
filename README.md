@@ -14,38 +14,38 @@ Plz see [promt.md](promt.md), thanx a lot to  <a href="https://chat.deepseek.com
 ## COMMAND LINE PARAMETERS
 
 ### Basic Email Options
-- `--debug` - Enable debug mode with detailed console output
-- `--subject TEXT` - Email subject line text
-- `--body TEXT` - Email body content text
-- `--attach FILE` - Attach file to email (supports full paths)
-- `--no-sound` - Disable all sound alerts and beeps
+`--debug` - Enable debug mode with detailed console output  
+`--subject TEXT` - Email subject line text  
+`--body TEXT` - Email body content text  
+`--attach FILE` - Attach file to email (supports full paths)  
+`--no-sound` - Disable all sound alerts and beeps
 
 ### SMTP Configuration (overrides INI file)
-- `--server HOST` - SMTP server hostname or IP address
-- `--port NUMBER` - SMTP server port number (default: 587)
-- `--username USER` - SMTP authentication username
-- `--password PASS` - SMTP authentication password
-- `--from EMAIL` - Sender email address
-- `--to EMAIL` - Recipient email address (supports multiple: "user1@d.com,user2@d.com")
-- `--ssl true|false` - Enable/disable SSL encryption
+`--server HOST` - SMTP server hostname or IP address  
+`--port NUMBER` - SMTP server port number (default: 587)  
+`--username USER` - SMTP authentication username  
+`--password PASS` - SMTP authentication password  
+`--from EMAIL` - Sender email address  
+`--to EMAIL` - Recipient email address (supports multiple: "user1@d.com,user2@d.com")  
+`--ssl true|false` - Enable/disable SSL encryption
 
 ### Advanced Email Features
-- `--cc EMAILS` - Carbon copy recipients (comma-separated)
-- `--bcc EMAILS` - Blind carbon copy recipients (comma-separated)
-- `--importance LEVEL` - Set email priority: high, normal, or low
+`--cc EMAILS` - Carbon copy recipients (comma-separated)  
+`--bcc EMAILS` - Blind carbon copy recipients (comma-separated)  
+`--importance LEVEL` - Set email priority: high, normal, or low
 
 ### Utility Commands
-- `--encrypt-password PASS` - Encrypt password for secure INI storage
-- `--reset-config` - Reset all configuration files to defaults
-- `--help, -h, /?` - Display comprehensive help information
+`--encrypt-password PASS` - Encrypt password for secure INI storage  
+`--reset-config` - Reset all configuration files to defaults  
+`--help, -h, /?` - Display comprehensive help information
 
 ## TEMPLATE VARIABLES
 Use these variables in subject and body:
-- `{host}` - Computer hostname
-- `{user}` - Current username
-- `{timestamp}` - Full date and time (yyyy-MM-dd HH:mm:ss)
-- `{time}` - Time only (HH:mm:ss)
-- `{date}` - Date only (yyyy-MM-dd)
+`{host}` - Computer hostname  
+`{user}` - Current username  
+`{timestamp}` - Full date and time (yyyy-MM-dd HH:mm:ss)  
+`{time}` - Time only (HH:mm:ss)  
+`{date}` - Date only (yyyy-MM-dd)
 
 ## USAGE EXAMPLES
 
