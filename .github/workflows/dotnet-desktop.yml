@@ -62,11 +62,12 @@ jobs:
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
       
     - name: Test Cross-Platform Compatibility
+      shell: bash
       run: |
-        if [ "$RUNNER_OS" == "Windows" ]; then
+        if [ "$RUNNER_OS" = "Windows" ]; then
           echo "Running Windows-specific tests"
           dotnet test --filter "Category=Windows"
-        elif [ "$RUNNER_OS" == "Linux" ]; then
+        elif [ "$RUNNER_OS" = "Linux" ]; then
           echo "Running Linux-specific tests"
           dotnet test --filter "Category=Linux"
         else
