@@ -115,7 +115,7 @@ jobs:
         path: ${{ env.Wap_Project_Directory }}\AppPackages
 
         
-            - name: Upload a Build Artifact
+- name: Upload a Build Artifact
   uses: actions/upload-artifact@v5.0.0
   with:
     # Artifact name
@@ -143,7 +143,7 @@ Minimum 1 day. Maximum 90 days unless changed from the repository settings page.
 
     include-hidden-files: # optional, default is false
 
-            - name: Download a Build Artifact
+- name: Download a Build Artifact
   uses: actions/download-artifact@v6.0.0
   with:
     # Name of the artifact to download. If unspecified, all artifacts for the run are downloaded.
