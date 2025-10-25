@@ -54,13 +54,18 @@ jobs:
         name: emailer-app
         path: ./publish/
         
-    - name: Create ZIP archive
+    - name: Create ZIP archive with emailer folder
       run: |
         $publishDir = "./publish"
         if (Test-Path $publishDir) {
-          # Создаем ZIP напрямую из папки publish - файлы будут в корне архива
-          Compress-Archive -Path "$publishDir/*" -DestinationPath "Emailer-${{ github.sha }}.zip" -Force
-          echo "ZIP archive created successfully"
+          # Создаем папку emailer и копируем файлы
+          New-Item -ItemType Directory -Path "./emailer" -Force
+          Copy-Item -Path "$publishDir/*" -Destination "./emailer/" -Recurse
+          
+          # Создаем ZIP с папкой emailer внутри (имя архива с тегом)
+          Compress-Archive -Path "./emailer/" -DestinationPath "emailer-windows-${{ github.ref_name }}.zip" -Force
+          Remove-Item -Path "./emailer" -Recurse -Force
+          echo "ZIP archive with emailer folder created successfully"
         } else {
           echo "Publish directory not found"
           exit 1
@@ -70,7 +75,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: emailer-zip
-        path: Emailer-${{ github.sha }}.zip
+        path: emailer-windows-${{ github.ref_name }}.zip
         retention-days: 30
         
   cross-platform-build:
@@ -144,7 +149,7 @@ jobs:
         Architecture: amd64
         Maintainer: Your Name <your-email@example.com>
         Description: SMTP Email Sending Utility
-         Emailer is a cross-platform application for sending emails via SMTP.
+         emailer is a cross-platform application for sending emails via SMTP.
          Features include SSL/TLS support, file attachments, and comprehensive logging.
         EOF
         
@@ -152,7 +157,7 @@ jobs:
         mkdir -p deb-package/usr/bin
         cat > deb-package/usr/bin/emailer << EOF
         #!/bin/bash
-        exec /usr/local/bin/emailer/Emailer "\$@"
+        exec /usr/local/bin/emailer/emailer "\$@"
         EOF
         chmod +x deb-package/usr/bin/emailer
         
@@ -187,25 +192,31 @@ jobs:
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
         
     - name: Publish for macOS
-      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime osx-x64 --self-contained true --output ./publish-macos
+      run: dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime osx-arm64 --self-contained true --output ./publish-macos
         
     - name: Verify INI file for macOS
       run: |
         echo "Checking INI file for macOS build:"
         find ./publish-macos -name "*.ini"
         
-    - name: Create macOS ZIP package
+    - name: Create macOS ZIP package with emailer folder
       run: |
-        # Создаем ZIP напрямую из папки publish-macos - файлы будут в корне архива
-        cd publish-macos
-        zip -r ../Emailer-macOS-${{ github.ref_name || github.sha }}.zip .
-        echo "macOS ZIP package created"
+        # Создаем папку emailer и копируем файлы
+        mkdir -p emailer
+        cp -r publish-macos/* emailer/
+        
+        # Создаем ZIP с папкой emailer внутри (имя архива с тегом)
+        zip -r emailer-macos-${{ github.ref_name }}.zip emailer/
+        
+        # Удаляем временную папку
+        rm -rf emailer
+        echo "macOS ZIP package with emailer folder created"
         
     - name: Upload macOS artifacts
       uses: actions/upload-artifact@v4
       with:
         name: emailer-macos-packages
-        path: Emailer-macOS-*.zip
+        path: emailer-macos-${{ github.ref_name }}.zip
         retention-days: 30
         
   release:
@@ -243,13 +254,18 @@ jobs:
     - name: Publish Release
       run: dotnet publish --configuration ${{ env.CONFIGURATION }} --output ./publish
       
-    - name: Create Release ZIP
+    - name: Create Release ZIP with emailer folder
       run: |
         $publishDir = "./publish"
         if (Test-Path $publishDir) {
-          # Создаем ZIP напрямую из папки publish - файлы будут в корне архива
-          Compress-Archive -Path "$publishDir/*" -DestinationPath "Emailer-Windows-${{ github.ref_name }}.zip" -Force
-          echo "Release ZIP archive created successfully"
+          # Создаем папку emailer и копируем файлы
+          New-Item -ItemType Directory -Path "./emailer" -Force
+          Copy-Item -Path "$publishDir/*" -Destination "./emailer/" -Recurse
+          
+          # Создаем ZIP с папкой emailer внутри (имя архива с тегом)
+          Compress-Archive -Path "./emailer/" -DestinationPath "emailer-windows-${{ github.ref_name }}.zip" -Force
+          Remove-Item -Path "./emailer" -Recurse -Force
+          echo "Release ZIP archive with emailer folder created successfully"
         } else {
           echo "Publish directory not found"
           exit 1
@@ -259,9 +275,9 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref_name }}
-        name: Emailer ${{ github.ref_name }}
+        name: emailer ${{ github.ref_name }}
         body: |
-          Emailer - SMTP Email Sending Utility
+          emailer - SMTP Email Sending Utility
           
           Features:
           - SMTP email sending with SSL/TLS
@@ -272,17 +288,20 @@ jobs:
           - Configuration via config.ini file
           
           **Downloads:**
-          - `Emailer-Windows-*.zip` - Portable Windows version
-          - `emailer_*.deb` - DEB package for Linux (Ubuntu/Debian)
-          - `Emailer-macOS-*.zip` - Portable macOS version
+          - `emailer-windows-${{ github.ref_name }}.zip` - Portable Windows version (x64)
+          - `emailer_*.deb` - DEB package for Linux (Ubuntu/Debian, amd64)
+          - `emailer-macos-${{ github.ref_name }}.zip` - Portable macOS version (ARM64 for Apple Silicon)
+          
+          **Installation:**
+          Extract ZIP archive and run `emailer.exe` (Windows) or `emailer` (macOS) from the `emailer` folder.
           
           **Configuration:**
-          Edit `config.ini` file to configure SMTP settings and defaults.
+          Edit `emailer/config.ini` file to configure SMTP settings and defaults.
           
           See README.md for full documentation.
         files: |
-          ./Emailer-Windows-${{ github.ref_name }}.zip
+          ./emailer-windows-${{ github.ref_name }}.zip
           ./emailer_*.deb
-          ./Emailer-macOS-*.zip
+          ./emailer-macos-${{ github.ref_name }}.zip
         draft: false
         prerelease: false
