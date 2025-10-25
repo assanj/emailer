@@ -1,4 +1,4 @@
-# Emailer - SMTP Email Sending Utility (cross-platform)
+# Emailer - SMTP Email Sender (opensorce & cross-platform utulity)
 Plz see [promt.md](promt.md), thanx a lot to  <a href="https://chat.deepseek.com" target="_blank" ><img src="https://upload.wikimedia.org/wikipedia/commons/e/ec/DeepSeek_logo.svg" alt="DeepSeek" height="20"></a>
 
 ## Download Latest Release [![Latest Release](https://img.shields.io/github/v/release/assanj/emailer?style=for-the-badge&label=Версия)](https://github.com/assanj/emailer/releases/latest)
