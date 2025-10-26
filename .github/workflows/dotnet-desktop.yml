@@ -28,6 +28,9 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
+    - name: Install Costura.Fody
+      run: dotnet add package Costura.Fody --version 5.8.0
+        
     - name: Restore dependencies
       run: dotnet restore
       
@@ -96,6 +99,9 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
+    - name: Install Costura.Fody
+      run: dotnet add package Costura.Fody --version 5.8.0
+        
     - name: Build
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
       
@@ -118,6 +124,9 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install Costura.Fody
+      run: dotnet add package Costura.Fody --version 5.8.0
         
     - name: Build
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
@@ -178,6 +187,9 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install Costura.Fody
+      run: dotnet add package Costura.Fody --version 5.8.0
         
     - name: Build
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
@@ -254,6 +266,9 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
+    - name: Install Costura.Fody
+      run: dotnet add package Costura.Fody --version 5.8.0
+        
     - name: Build
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
         
@@ -293,6 +308,9 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install Costura.Fody
+      run: dotnet add package Costura.Fody --version 5.8.0
         
     - name: Build
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
