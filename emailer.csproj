@@ -9,6 +9,9 @@
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <!-- Отключаем генерацию PDB файлов -->
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
 
   <ItemGroup>

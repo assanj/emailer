@@ -27,12 +27,12 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "emailer",
+              "Title": "emailer.csproj",
               "DocumentMoniker": "C:\\Users\\MSKazakov\\source\\smtp3\\emailer\\emailer.csproj",
               "RelativeDocumentMoniker": "emailer.csproj",
               "ToolTip": "C:\\Users\\MSKazakov\\source\\smtp3\\emailer\\emailer.csproj",
               "RelativeToolTip": "emailer.csproj",
-              "ViewState": "AgIAAAgAAAAAAAAAAAAkwCoAAAArAAAAAAAAAA==",
+              "ViewState": "AgIAAAoAAAAAAAAAAADwvwsAAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-10-26T22:42:36.217Z",
               "EditorCaption": ""
@@ -47,8 +47,7 @@
               "RelativeToolTip": "FodyWeavers.xml",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003576|",
-              "WhenOpened": "2025-10-26T22:35:12.332Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-10-26T22:35:12.332Z"
             }
           ]
         }
