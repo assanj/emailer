@@ -5,16 +5,25 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    
+    <!-- Windows: Costura + Single File -->
+    <PublishSingleFile Condition="'$(RuntimeIdentifier)' == 'win-x64'">true</PublishSingleFile>
+    <SelfContained Condition="'$(RuntimeIdentifier)' == 'win-x64'">true</SelfContained>
+    
+    <!-- Linux/macOS: Только Single File -->
+    <PublishSingleFile Condition="'$(RuntimeIdentifier)' != 'win-x64'">true</PublishSingleFile>
+    <SelfContained Condition="'$(RuntimeIdentifier)' != 'win-x64'">true</SelfContained>
+    
     <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
-    <!-- Отключаем генерацию PDB файлов -->
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
-    <!-- Важно: разрешаем копирование контентных файлов при single file -->
     <IncludeContentInSingleFile>false</IncludeContentInSingleFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Costura только для Windows -->
+    <PackageReference Include="Costura.Fody" Version="5.8.0" Condition="'$(RuntimeIdentifier)' == 'win-x64'" />
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Remove="bin\**" />
@@ -32,7 +41,6 @@
   <ItemGroup>
     <Content Include="emailer.ini">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <!-- Явно указываем не включать в single file -->
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
     <Content Include="README.md">
@@ -42,10 +50,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Costura.Fody" Version="5.8.0" />
   </ItemGroup>
 
 </Project>
