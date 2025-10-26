@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -12,6 +12,8 @@
     <!-- Отключаем генерацию PDB файлов -->
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
+    <!-- Важно: разрешаем копирование контентных файлов при single file -->
+    <IncludeContentInSingleFile>false</IncludeContentInSingleFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -30,15 +32,15 @@
   <ItemGroup>
     <Content Include="emailer.ini">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="promt.md">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <!-- Явно указываем не включать в single file -->
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
     <Content Include="README.md">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </Content>
     <Content Include="readme.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
   </ItemGroup>
 
