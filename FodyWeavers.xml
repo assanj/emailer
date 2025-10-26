@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<Weavers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="FodyWeavers.xsd">
+  <Costura>
+    <IncludeAssemblies>
+      <!-- Все сборки будут включены автоматически -->
+    </IncludeAssemblies>
+    <Unmanaged64Assemblies>
+      <!-- 64-битные неуправляемые сборки -->
+    </Unmanaged64Assemblies>
+    <PreloadOrder>
+      <!-- Порядок загрузки сборок -->
+    </PreloadOrder>
+  </Costura>
+</Weavers>

@@ -15,4 +15,4 @@ C:\Users\MSKazakov\source\smtp3\emailer\obj\Debug\net8.0\emailer.genruntimeconfi
 C:\Users\MSKazakov\source\smtp3\emailer\obj\Debug\net8.0\ref\emailer.dll
 C:\Users\MSKazakov\source\smtp3\emailer\bin\Debug\net8.0\emailer.ini
 C:\Users\MSKazakov\source\smtp3\emailer\bin\Debug\net8.0\promt.md
-C:\Users\MSKazakov\source\smtp3\emailer\bin\Debug\net8.0\README.md
+C:\Users\MSKazakov\source\smtp3\emailer\bin\Debug\net8.0\readme.txt
