@@ -28,9 +28,6 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Install Costura.Fody
-      run: dotnet add package Costura.Fody --version 5.7.0
-        
     - name: Restore dependencies
       run: dotnet restore
       
@@ -43,6 +40,11 @@ jobs:
     - name: Build Windows app with Costura
       run: |
         dotnet build --configuration ${{ env.CONFIGURATION }} --runtime win-x64 --output ./build-windows
+      
+    - name: Copy config files to build directory
+      run: |
+        copy emailer.ini build-windows\ 2>nul || echo "emailer.ini not found"
+        copy readme.txt build-windows\ 2>nul || echo "readme.txt not found"
       
     - name: Verify files included
       run: |
@@ -94,9 +96,6 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Install Costura.Fody
-      run: dotnet add package Costura.Fody --version 5.7.0
-        
     - name: Build
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
       
@@ -120,12 +119,14 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Install Costura.Fody
-      run: dotnet add package Costura.Fody --version 5.7.0
-        
     - name: Build for Linux with Costura
       run: |
         dotnet build --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --output ./build-linux
+        
+    - name: Copy config files to build directory
+      run: |
+        cp emailer.ini build-linux/ 2>/dev/null || echo "emailer.ini not found"
+        cp readme.txt build-linux/ 2>/dev/null || echo "readme.txt not found"
         
     - name: Install fpm for easy package creation
       run: |
@@ -177,12 +178,14 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Install Costura.Fody
-      run: dotnet add package Costura.Fody --version 5.7.0
-        
     - name: Build for Linux with Costura
       run: |
         dotnet build --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --output ./build-linux
+        
+    - name: Copy config files to build directory
+      run: |
+        cp emailer.ini build-linux/ 2>/dev/null || echo "emailer.ini not found"
+        cp readme.txt build-linux/ 2>/dev/null || echo "readme.txt not found"
         
     - name: Verify files for Linux
       run: |
@@ -250,12 +253,14 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Install Costura.Fody
-      run: dotnet add package Costura.Fody --version 5.7.0
-        
     - name: Build for Linux with Costura
       run: |
         dotnet build --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --output ./build-linux
+        
+    - name: Copy config files to build directory
+      run: |
+        cp emailer.ini build-linux/ 2>/dev/null || echo "emailer.ini not found"
+        cp readme.txt build-linux/ 2>/dev/null || echo "readme.txt not found"
         
     - name: Create Linux ZIP package with emailer folder
       run: |
@@ -288,12 +293,14 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Install Costura.Fody
-      run: dotnet add package Costura.Fody --version 5.7.0
-        
     - name: Build for macOS with Costura
       run: |
         dotnet build --configuration ${{ env.CONFIGURATION }} --runtime osx-x64 --output ./build-macos
+        
+    - name: Copy config files to build directory
+      run: |
+        cp emailer.ini build-macos/ 2>/dev/null || echo "emailer.ini not found"
+        cp readme.txt build-macos/ 2>/dev/null || echo "readme.txt not found"
         
     - name: Verify files for macOS
       run: |
@@ -379,14 +386,121 @@ jobs:
         body: |
           emailer - SMTP Email Sending Utility
           
-          Single executable with embedded dependencies for all platforms.
+          Features:
+          - SMTP email sending with SSL/TLS
+          - Cross-platform support (Windows/Linux/macOS)
+          - File attachment support
+          - Password encryption
+          - Comprehensive logging
+          - Configuration via emailer.ini file
+          - **Single executable for all platforms**
           
           **Downloads:**
-          - **Windows**: emailer-windows-${{ github.ref_name }}.zip
-          - **Linux DEB**: emailer_1.0.0-${{ github.run_number }}_amd64.deb
-          - **Linux RPM**: emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
-          - **Linux Portable**: emailer-linux-${{ github.ref_name }}.zip
-          - **macOS**: emailer-macos-${{ github.ref_name }}.zip
+          
+          ### Windows
+          - [emailer-windows-${{ github.ref_name }}.zip](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-windows-${{ github.ref_name }}.zip) - **Single executable** with config files (x64)
+          
+          ### Linux
+          - [emailer_1.0.0-${{ github.run_number }}_amd64.deb](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer_1.0.0-${{ github.run_number }}_amd64.deb) - DEB package (Ubuntu/Debian, amd64)
+          - [emailer-1.0.0-${{ github.run_number }}.x86_64.rpm](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-1.0.0-${{ github.run_number }}.x86_64.rpm) - RPM package (Fedora/RHEL/CentOS, x86_64)
+          - [emailer-linux-${{ github.ref_name }}.zip](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-linux-${{ github.ref_name }}.zip) - **Single executable** with config files (x64)
+          
+          ### macOS
+          - [emailer-macos-${{ github.ref_name }}.zip](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-macos-${{ github.ref_name }}.zip) - **Single executable** with config files (x64)
+          
+          **Configuration:**
+          After installation, edit `emailer.ini` file to configure SMTP settings and defaults.
+          
+          The application will look for `emailer.ini` in the following locations:
+          - Current directory
+          - Application directory
+          - User home directory
+          
+          **Usage:**
+          ```bash
+          emailer --help
+          emailer --config /path/to/emailer.ini
+          emailer --to recipient@example.com --subject "Test" --body "Hello World"
+          ```
+          
+          **Installation Instructions:**
+          
+          **Windows:**
+          ```powershell
+          # Download and extract
+          Invoke-WebRequest -Uri "https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-windows-${{ github.ref_name }}.zip" -OutFile "emailer-windows-${{ github.ref_name }}.zip"
+          Expand-Archive -Path "emailer-windows-${{ github.ref_name }}.zip" -DestinationPath "."
+          cd emailer
+          .\emailer.exe
+          ```
+          
+          **macOS:**
+          ```bash
+          # Download and extract
+          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-macos-${{ github.ref_name }}.zip
+          unzip emailer-macos-${{ github.ref_name }}.zip
+          cd emailer
+          ./emailer
+          ```
+          
+          **Linux Installation:**
+          
+          **Ubuntu/Debian:**
+          ```bash
+          # Download and install DEB package
+          wget https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer_1.0.0-${{ github.run_number }}_amd64.deb
+          sudo dpkg -i emailer_1.0.0-${{ github.run_number }}_amd64.deb
+          
+          # Or using curl
+          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer_1.0.0-${{ github.run_number }}_amd64.deb
+          sudo dpkg -i emailer_1.0.0-${{ github.run_number }}_amd64.deb
+          ```
+          
+          **Fedora/RHEL/CentOS:**
+          ```bash
+          # Download and install RPM package
+          wget https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
+          sudo rpm -i emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
+          
+          # Or using curl
+          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
+          sudo rpm -i emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
+          ```
+          
+          **Portable Linux (any distribution):**
+          ```bash
+          # Download and extract portable version
+          wget https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-linux-${{ github.ref_name }}.zip
+          unzip emailer-linux-${{ github.ref_name }}.zip
+          cd emailer
+          ./emailer
+          
+          # Or using curl
+          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-linux-${{ github.ref_name }}.zip
+          unzip emailer-linux-${{ github.ref_name }}.zip
+          cd emailer
+          ./emailer
+          ```
+          
+          **One-liner installation (Linux DEB):**
+          ```bash
+          # Download and install in one command (requires root)
+          wget -q https://github.com/assanj/emailer/releases/latest/download/emailer_*_amd64.deb -O emailer.deb && sudo dpkg -i emailer.deb
+          ```
+          
+          **One-liner installation (Linux RPM):**
+          ```bash
+          # Download and install in one command (requires root)
+          wget -q https://github.com/assanj/emailer/releases/latest/download/emailer-*.x86_64.rpm -O emailer.rpm && sudo rpm -i emailer.rpm
+          ```
+          
+          **One-liner portable (Linux):**
+          ```bash
+          # Download, extract and run in one command
+          wget -q https://github.com/assanj/emailer/releases/latest/download/emailer-linux-*.zip -O emailer.zip && unzip -q emailer.zip && cd emailer && ./emailer
+          ```
+          
+          See README.md for full documentation and examples.
         files: |
           ./release-artifacts/emailer-windows-*.zip
           ./release-artifacts/emailer_*.deb
