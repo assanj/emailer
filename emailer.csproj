@@ -6,12 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 
-    <!-- ОТКЛЮЧАЕМ Single File ДЛЯ ВСЕХ КОНФИГУРАЦИЙ -->
+    <!-- Отключаем Single File -->
     <PublishSingleFile>false</PublishSingleFile>
     <SelfContained>false</SelfContained>
-
-    <!-- Настройки для Costura -->
-    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
