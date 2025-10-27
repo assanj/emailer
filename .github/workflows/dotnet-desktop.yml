@@ -39,7 +39,8 @@ jobs:
       
     - name: Build Windows app with Costura
       run: |
-        dotnet build --configuration ${{ env.CONFIGURATION }} --runtime win-x64 --output ./build-windows
+        # Используем publish вместо build для RID
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime win-x64 --output ./build-windows --self-contained false
       
     - name: Copy config files to build directory
       run: |
@@ -121,7 +122,7 @@ jobs:
         
     - name: Build for Linux with Costura
       run: |
-        dotnet build --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --output ./build-linux
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --output ./build-linux --self-contained false
         
     - name: Copy config files to build directory
       run: |
@@ -180,7 +181,7 @@ jobs:
         
     - name: Build for Linux with Costura
       run: |
-        dotnet build --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --output ./build-linux
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --output ./build-linux --self-contained false
         
     - name: Copy config files to build directory
       run: |
@@ -255,7 +256,7 @@ jobs:
         
     - name: Build for Linux with Costura
       run: |
-        dotnet build --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --output ./build-linux
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --output ./build-linux --self-contained false
         
     - name: Copy config files to build directory
       run: |
@@ -295,7 +296,7 @@ jobs:
         
     - name: Build for macOS with Costura
       run: |
-        dotnet build --configuration ${{ env.CONFIGURATION }} --runtime osx-x64 --output ./build-macos
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime osx-x64 --output ./build-macos --self-contained false
         
     - name: Copy config files to build directory
       run: |
@@ -323,189 +324,3 @@ jobs:
         name: emailer-macos-packages
         path: emailer-macos-*.zip
         retention-days: 30
-        
-  release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    needs: [build, cross-platform-build, linux-deb-package, linux-rpm-package, linux-portable, macos-packages]
-    if: startsWith(github.ref, 'refs/tags/v')
-    permissions:
-      contents: write
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Download all artifacts
-      run: |
-        mkdir -p release-artifacts
-        
-    - name: Download Windows ZIP
-      uses: actions/download-artifact@v4
-      with:
-        name: emailer-zip
-        path: ./release-artifacts
-        
-    - name: Download DEB package
-      uses: actions/download-artifact@v4
-      with:
-        name: emailer-deb-package
-        path: ./release-artifacts
-        
-    - name: Download RPM package
-      uses: actions/download-artifact@v4
-      with:
-        name: emailer-rpm-package
-        path: ./release-artifacts
-        
-    - name: Download Linux portable
-      uses: actions/download-artifact@v4
-      with:
-        name: emailer-linux-portable
-        path: ./release-artifacts
-        
-    - name: Download macOS packages
-      uses: actions/download-artifact@v4
-      with:
-        name: emailer-macos-packages
-        path: ./release-artifacts
-      
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-        
-    - name: Build Release version
-      run: dotnet build --configuration ${{ env.CONFIGURATION }}
-        
-    - name: Create Release
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: ${{ github.ref_name }}
-        name: emailer ${{ github.ref_name }}
-        body: |
-          emailer - SMTP Email Sending Utility
-          
-          Features:
-          - SMTP email sending with SSL/TLS
-          - Cross-platform support (Windows/Linux/macOS)
-          - File attachment support
-          - Password encryption
-          - Comprehensive logging
-          - Configuration via emailer.ini file
-          - **Single executable for all platforms**
-          
-          **Downloads:**
-          
-          ### Windows
-          - [emailer-windows-${{ github.ref_name }}.zip](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-windows-${{ github.ref_name }}.zip) - **Single executable** with config files (x64)
-          
-          ### Linux
-          - [emailer_1.0.0-${{ github.run_number }}_amd64.deb](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer_1.0.0-${{ github.run_number }}_amd64.deb) - DEB package (Ubuntu/Debian, amd64)
-          - [emailer-1.0.0-${{ github.run_number }}.x86_64.rpm](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-1.0.0-${{ github.run_number }}.x86_64.rpm) - RPM package (Fedora/RHEL/CentOS, x86_64)
-          - [emailer-linux-${{ github.ref_name }}.zip](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-linux-${{ github.ref_name }}.zip) - **Single executable** with config files (x64)
-          
-          ### macOS
-          - [emailer-macos-${{ github.ref_name }}.zip](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-macos-${{ github.ref_name }}.zip) - **Single executable** with config files (x64)
-          
-          **Configuration:**
-          After installation, edit `emailer.ini` file to configure SMTP settings and defaults.
-          
-          The application will look for `emailer.ini` in the following locations:
-          - Current directory
-          - Application directory
-          - User home directory
-          
-          **Usage:**
-          ```bash
-          emailer --help
-          emailer --config /path/to/emailer.ini
-          emailer --to recipient@example.com --subject "Test" --body "Hello World"
-          ```
-          
-          **Installation Instructions:**
-          
-          **Windows:**
-          ```powershell
-          # Download and extract
-          Invoke-WebRequest -Uri "https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-windows-${{ github.ref_name }}.zip" -OutFile "emailer-windows-${{ github.ref_name }}.zip"
-          Expand-Archive -Path "emailer-windows-${{ github.ref_name }}.zip" -DestinationPath "."
-          cd emailer
-          .\emailer.exe
-          ```
-          
-          **macOS:**
-          ```bash
-          # Download and extract
-          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-macos-${{ github.ref_name }}.zip
-          unzip emailer-macos-${{ github.ref_name }}.zip
-          cd emailer
-          ./emailer
-          ```
-          
-          **Linux Installation:**
-          
-          **Ubuntu/Debian:**
-          ```bash
-          # Download and install DEB package
-          wget https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer_1.0.0-${{ github.run_number }}_amd64.deb
-          sudo dpkg -i emailer_1.0.0-${{ github.run_number }}_amd64.deb
-          
-          # Or using curl
-          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer_1.0.0-${{ github.run_number }}_amd64.deb
-          sudo dpkg -i emailer_1.0.0-${{ github.run_number }}_amd64.deb
-          ```
-          
-          **Fedora/RHEL/CentOS:**
-          ```bash
-          # Download and install RPM package
-          wget https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
-          sudo rpm -i emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
-          
-          # Or using curl
-          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
-          sudo rpm -i emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
-          ```
-          
-          **Portable Linux (any distribution):**
-          ```bash
-          # Download and extract portable version
-          wget https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-linux-${{ github.ref_name }}.zip
-          unzip emailer-linux-${{ github.ref_name }}.zip
-          cd emailer
-          ./emailer
-          
-          # Or using curl
-          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-linux-${{ github.ref_name }}.zip
-          unzip emailer-linux-${{ github.ref_name }}.zip
-          cd emailer
-          ./emailer
-          ```
-          
-          **One-liner installation (Linux DEB):**
-          ```bash
-          # Download and install in one command (requires root)
-          wget -q https://github.com/assanj/emailer/releases/latest/download/emailer_*_amd64.deb -O emailer.deb && sudo dpkg -i emailer.deb
-          ```
-          
-          **One-liner installation (Linux RPM):**
-          ```bash
-          # Download and install in one command (requires root)
-          wget -q https://github.com/assanj/emailer/releases/latest/download/emailer-*.x86_64.rpm -O emailer.rpm && sudo rpm -i emailer.rpm
-          ```
-          
-          **One-liner portable (Linux):**
-          ```bash
-          # Download, extract and run in one command
-          wget -q https://github.com/assanj/emailer/releases/latest/download/emailer-linux-*.zip -O emailer.zip && unzip -q emailer.zip && cd emailer && ./emailer
-          ```
-          
-          See README.md for full documentation and examples.
-        files: |
-          ./release-artifacts/emailer-windows-*.zip
-          ./release-artifacts/emailer_*.deb
-          ./release-artifacts/emailer-*.rpm
-          ./release-artifacts/emailer-linux-*.zip
-          ./release-artifacts/emailer-macos-*.zip
-        draft: false
-        prerelease: false
