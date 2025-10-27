@@ -28,9 +28,6 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Install Costura.Fody
-      run: dotnet add package Costura.Fody --version 5.8.0
-        
     - name: Restore dependencies
       run: dotnet restore
       
@@ -42,8 +39,8 @@ jobs:
       
     - name: Publish Windows app (Single File)
       run: |
-        # Публикуем как единый файл для Windows с Costura
-        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime win-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-windows
+        # Публикуем как единый файл для Windows БЕЗ Costura
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true --output ./publish-windows
       
     - name: Verify files included
       run: |
@@ -103,9 +100,6 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Install Costura.Fody
-      run: dotnet add package Costura.Fody --version 5.8.0
-        
     - name: Build
       run: dotnet build --configuration ${{ env.CONFIGURATION }}
       
@@ -129,16 +123,10 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Install Costura.Fody
-      run: dotnet add package Costura.Fody --version 5.8.0
-        
-    - name: Build
-      run: dotnet build --configuration ${{ env.CONFIGURATION }}
-        
     - name: Publish for Linux (Single File)
       run: |
-        # Публикуем как единый файл для Linux
-        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-linux
+        # Публикуем как единый файл для Linux БЕЗ Costura
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true --output ./publish-linux
         
     - name: Install fpm for easy package creation
       run: |
@@ -194,16 +182,10 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Install Costura.Fody
-      run: dotnet add package Costura.Fody --version 5.8.0
-        
-    - name: Build
-      run: dotnet build --configuration ${{ env.CONFIGURATION }}
-        
     - name: Publish for Linux (Single File)
       run: |
-        # Публикуем как единый файл для Linux
-        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-linux
+        # Публикуем как единый файл для Linux БЕЗ Costura
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true --output ./publish-linux
         
     - name: Verify files for Linux
       run: |
@@ -274,16 +256,10 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Install Costura.Fody
-      run: dotnet add package Costura.Fody --version 5.8.0
-        
-    - name: Build
-      run: dotnet build --configuration ${{ env.CONFIGURATION }}
-        
     - name: Publish for Linux (Single File)
       run: |
-        # Публикуем как единый файл для Linux
-        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-linux
+        # Публикуем как единый файл для Linux БЕЗ Costura
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true --output ./publish-linux
         
     - name: Create Linux ZIP package with emailer folder
       run: |
@@ -319,16 +295,10 @@ jobs:
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
         
-    - name: Install Costura.Fody
-      run: dotnet add package Costura.Fody --version 5.8.0
-        
-    - name: Build
-      run: dotnet build --configuration ${{ env.CONFIGURATION }}
-        
     - name: Publish for macOS (Single File)
       run: |
-        # Публикуем как единый файл для macOS
-        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime osx-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-macos
+        # Публикуем как единый файл для macOS БЕЗ Costura
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime osx-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=true --output ./publish-macos
         
     - name: Verify files for macOS
       run: |
@@ -423,7 +393,7 @@ jobs:
           - File attachment support
           - Password encryption
           - Comprehensive logging
-          - Configuration via config.ini file
+          - Configuration via emailer.ini file
           - **Single executable for all platforms**
           
           **Downloads:**
@@ -440,17 +410,12 @@ jobs:
           - [emailer-macos-${{ github.ref_name }}.zip](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-macos-${{ github.ref_name }}.zip) - **Single executable** with config files (x64)
           
           **Configuration:**
-          After installation, edit `config.ini` file to configure SMTP settings and defaults.
-          
-          The application will look for `config.ini` in the following locations:
-          - Current directory
-          - Application directory
-          - User home directory
+          After installation, edit `emailer.ini` file to configure SMTP settings and defaults.
           
           **Usage:**
           ```bash
           emailer --help
-          emailer --config /path/to/config.ini
+          emailer --config /path/to/emailer.ini
           emailer --to recipient@example.com --subject "Test" --body "Hello World"
           ```
           
