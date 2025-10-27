@@ -1,54 +1,29 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    
-    <!-- Windows: Costura + Single File -->
-    <PublishSingleFile Condition="'$(RuntimeIdentifier)' == 'win-x64'">true</PublishSingleFile>
-    <SelfContained Condition="'$(RuntimeIdentifier)' == 'win-x64'">true</SelfContained>
-    
-    <!-- Linux/macOS: Только Single File -->
-    <PublishSingleFile Condition="'$(RuntimeIdentifier)' != 'win-x64'">true</PublishSingleFile>
-    <SelfContained Condition="'$(RuntimeIdentifier)' != 'win-x64'">true</SelfContained>
-    
-    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
-    <DebugType>none</DebugType>
-    <DebugSymbols>false</DebugSymbols>
-    <IncludeContentInSingleFile>false</IncludeContentInSingleFile>
+
+    <!-- ОТКЛЮЧАЕМ Single File ДЛЯ ВСЕХ КОНФИГУРАЦИЙ -->
+    <PublishSingleFile>false</PublishSingleFile>
+    <SelfContained>false</SelfContained>
+
+    <!-- Настройки для Costura -->
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Costura только для Windows -->
-    <PackageReference Include="Costura.Fody" Version="5.8.0" Condition="'$(RuntimeIdentifier)' == 'win-x64'" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="bin\**" />
-    <EmbeddedResource Remove="bin\**" />
-    <None Remove="bin\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Remove="emailer.ini" />
-    <None Remove="promt.md" />
-    <None Remove="README.md" />
-    <None Remove="readme.txt" />
+    <PackageReference Include="Costura.Fody" Version="5.7.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Content Include="emailer.ini">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
-    </Content>
-    <Content Include="README.md">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="readme.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 
