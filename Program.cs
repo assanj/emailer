@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -9,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Reflection;
 
 namespace emailer
 {
@@ -16,8 +16,43 @@ namespace emailer
     {
         static void Main(string[] args)
         {
+            // Set working directory to executable location to ensure config files are found
+            SetWorkingDirectoryToExecutable();
+            
             Emailer emailer = new Emailer();
             emailer.Run(args);
+        }
+
+        /// <summary>
+        /// Sets the working directory to the executable's directory
+        /// This ensures the application looks for files (emailer.ini, emailer.log) 
+        /// in the correct directory, not in temporary CI/CD folders
+        /// </summary>
+        static void SetWorkingDirectoryToExecutable()
+        {
+            try
+            {
+                // Get path to executable file
+                string executablePath = Assembly.GetExecutingAssembly().Location;
+                string executableDirectory = Path.GetDirectoryName(executablePath);
+                
+                if (!string.IsNullOrEmpty(executableDirectory) && Directory.Exists(executableDirectory))
+                {
+                    // Set working directory to executable location
+                    Directory.SetCurrentDirectory(executableDirectory);
+                    Console.WriteLine($"Working directory set to: {executableDirectory}");
+                }
+                else
+                {
+                    Console.WriteLine($"Warning: Could not set working directory to: {executableDirectory}");
+                    Console.WriteLine($"Current directory remains: {Environment.CurrentDirectory}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error setting working directory: {ex.Message}");
+                Console.WriteLine($"Current directory remains: {Environment.CurrentDirectory}");
+            }
         }
     }
 
@@ -36,6 +71,7 @@ namespace emailer
         private List<string> _fileLockWarnings = new List<string>();
         private bool _attachmentFailed = false;
 
+        // Command line parameter storage
         private string _cmdServer = "";
         private string _cmdPort = "";
         private string _cmdUsername = "";
@@ -51,10 +87,12 @@ namespace emailer
         {
             try
             {
+                // Working directory is now set to executable location
                 string appDir = AppDomain.CurrentDomain.BaseDirectory;
                 _iniPath = Path.Combine(appDir, "emailer.ini");
                 _logPath = Path.Combine(appDir, "emailer.log");
 
+                // Show help if requested
                 if (args.Contains("--help") || args.Contains("-h") ||
                     args.Contains("/?") || args.Contains("-?") ||
                     args.Contains("--?") || args.Contains("?"))
@@ -63,20 +101,24 @@ namespace emailer
                     return;
                 }
 
+                // Handle password encryption command
                 if (args.Contains("--encrypt-password"))
                 {
                     EncryptPasswordCommand(args);
                     return;
                 }
 
+                // Handle config reset command
                 if (args.Contains("--reset-config"))
                 {
                     ResetConfigurationCommand();
                     return;
                 }
 
+                // Parse command line arguments
                 ParseArguments(args);
 
+                // Debug mode initialization
                 if (_debug && !_debugModeLogged)
                 {
                     ShowConsole();
@@ -88,6 +130,7 @@ namespace emailer
                     _debugModeLogged = true;
                 }
 
+                // Send email with current configuration
                 SendEmail();
             }
             catch (Exception ex)
@@ -216,6 +259,7 @@ EXAMPLES:
 
         private void ParseArguments(string[] args)
         {
+            // Parse all command line arguments
             for (int i = 0; i < args.Length; i++)
             {
                 switch (args[i])
@@ -286,6 +330,7 @@ EXAMPLES:
         {
             try
             {
+                // Allocate console on Windows for debug output
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     AllocConsole();
@@ -304,6 +349,7 @@ EXAMPLES:
 
             try
             {
+                // Play system beep on Windows
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
                     Console.Beep(1000, 500);
@@ -314,6 +360,7 @@ EXAMPLES:
 
         private bool IsFileLocked(string filePath)
         {
+            // Check if file is locked by another process
             try
             {
                 using (FileStream stream = File.Open(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
@@ -348,7 +395,7 @@ EXAMPLES:
                 string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
                 string alarmMessage = $"[{timestamp}] [ALARM] {warning}";
 
-                // Write to console
+                // Write to console if in debug mode
                 if (_debug)
                 {
                     Console.WriteLine(alarmMessage);
@@ -382,6 +429,7 @@ EXAMPLES:
 
         private bool IsPasswordEncrypted(string password)
         {
+            // Check if password is Base64 encoded
             if (string.IsNullOrEmpty(password))
                 return false;
 
@@ -412,6 +460,7 @@ EXAMPLES:
 
         private bool ParseBool(string value)
         {
+            // Parse boolean values from string
             if (string.IsNullOrEmpty(value))
                 return false;
 
@@ -421,6 +470,7 @@ EXAMPLES:
 
         private MailPriority ParseImportance(string importance)
         {
+            // Parse email importance/priority
             if (string.IsNullOrEmpty(importance))
                 return MailPriority.Normal;
 
@@ -438,6 +488,7 @@ EXAMPLES:
 
         private List<string> ParseEmailList(string emailList)
         {
+            // Parse comma-separated email lists
             var emails = new List<string>();
             if (string.IsNullOrEmpty(emailList))
                 return emails;
@@ -456,6 +507,7 @@ EXAMPLES:
 
         private bool IsValidEmail(string email)
         {
+            // Validate email format
             if (string.IsNullOrEmpty(email))
                 return false;
 
@@ -472,6 +524,7 @@ EXAMPLES:
 
         private void UnifiedLog(string message, string level = "INFO")
         {
+            // Unified logging to both file and console
             if (_inFileLockNotification && level == "ALARM")
                 return;
 
@@ -488,20 +541,24 @@ EXAMPLES:
 
         private void SendEmail()
         {
+            // Main email sending logic
             string appDir = AppDomain.CurrentDomain.BaseDirectory;
             _iniPath = Path.Combine(appDir, "emailer.ini");
 
+            // Check if config file is locked
             if (File.Exists(_iniPath) && IsFileLocked(_iniPath))
             {
                 NotifyFileLock(_iniPath, "INI");
                 return;
             }
 
+            // Check if log file is locked
             if (File.Exists(_logPath) && IsFileLocked(_logPath))
             {
                 NotifyFileLock(_logPath, "Log");
             }
 
+            // Read settings from INI file or command line
             var settings = ReadSettings();
             if (settings == null)
             {
@@ -509,8 +566,10 @@ EXAMPLES:
                 return;
             }
 
+            // Apply command line overrides to settings
             ApplyCommandLineOverrides(settings);
 
+            // Check if password is still default
             if (settings.Password == "yourpassword" && string.IsNullOrEmpty(_cmdPassword))
             {
                 string error = "Password not configured - you MUST edit emailer.ini and change 'yourpassword' to your actual password";
@@ -526,6 +585,7 @@ EXAMPLES:
 
             try
             {
+                // Decrypt password if it's encrypted
                 if (passwordWasEncrypted)
                 {
                     try
@@ -540,6 +600,7 @@ EXAMPLES:
                     }
                 }
 
+                // Create SMTP client and send email
                 using (SmtpClient client = new SmtpClient(settings.SmtpServer, settings.SmtpPort))
                 {
                     client.Credentials = new NetworkCredential(settings.Username, actualPassword);
@@ -549,9 +610,9 @@ EXAMPLES:
                     using (MailMessage message = new MailMessage())
                     {
                         message.Priority = ParseImportance(_cmdImportance);
-
                         message.From = new MailAddress(settings.FromEmail);
 
+                        // Parse recipient lists
                         var toEmails = ParseEmailList(settings.ToEmail);
                         if (toEmails.Count == 0)
                         {
@@ -564,22 +625,25 @@ EXAMPLES:
                             message.To.Add(email);
                         }
 
+                        // Add CC recipients
                         var ccEmails = ParseEmailList(_cmdCc);
                         foreach (var email in ccEmails)
                         {
                             message.CC.Add(email);
                         }
 
+                        // Add BCC recipients
                         var bccEmails = ParseEmailList(_cmdBcc);
                         foreach (var email in bccEmails)
                         {
                             message.Bcc.Add(email);
                         }
 
-                        // Build body - add file lock warnings only if attachment failed
+                        // Build email body with template variables
                         string baseBody = string.IsNullOrEmpty(_body) ? GetDefaultBody() : ProcessTemplateVariables(_body);
                         string finalBody = baseBody;
 
+                        // Add file lock warnings if attachment failed
                         if (_attachmentFailed && _fileLockWarnings.Count > 0)
                         {
                             finalBody = baseBody + "\n\nFILE LOCK WARNINGS:\n" + string.Join("\n", _fileLockWarnings);
@@ -587,6 +651,7 @@ EXAMPLES:
 
                         message.Body = finalBody;
 
+                        // Build subject with template variables
                         string finalSubject = string.IsNullOrEmpty(_subject) ?
                             $"host: {Environment.MachineName}" :
                             ProcessTemplateVariables(_subject);
@@ -595,6 +660,7 @@ EXAMPLES:
                         // Reset attachment failure flag
                         _attachmentFailed = false;
 
+                        // Handle file attachment if specified
                         if (!string.IsNullOrEmpty(_attachmentPath))
                         {
                             bool attachmentSuccess = HandleAttachment(message, _attachmentPath);
@@ -604,8 +670,10 @@ EXAMPLES:
                             }
                         }
 
+                        // Send the email
                         client.Send(message);
 
+                        // Auto-encrypt password after successful send
                         if (!passwordWasEncrypted && string.IsNullOrEmpty(_cmdPassword))
                         {
                             if (!IsFileLocked(_iniPath))
@@ -627,6 +695,7 @@ EXAMPLES:
                             }
                         }
 
+                        // Log successful email send
                         string logSubject = string.IsNullOrEmpty(_subject) ? "<null>" : _subject;
                         string logBody = string.IsNullOrEmpty(_body) ? "<null>" : _body;
                         string attachmentInfo = string.IsNullOrEmpty(_attachmentPath) ? "" : $" | Attachment: {_attachmentPath}";
@@ -642,6 +711,7 @@ EXAMPLES:
             }
             catch (SmtpException ex) when (IsAuthenticationError(ex))
             {
+                // Handle authentication errors and revert encryption if needed
                 if (passwordWasEncrypted && string.IsNullOrEmpty(_cmdPassword))
                 {
                     if (!IsFileLocked(_iniPath))
@@ -681,6 +751,7 @@ EXAMPLES:
 
         private bool HandleAttachment(MailMessage message, string filePath)
         {
+            // Handle file attachments with locked file recovery
             try
             {
                 string fullPath = Path.GetFullPath(filePath);
@@ -700,6 +771,7 @@ EXAMPLES:
                 }
                 catch (IOException ioEx) when (ioEx.Message.Contains("used by another process") || ioEx.Message.Contains("locked") || ioEx.Message.Contains("busy"))
                 {
+                    // File is locked - create temporary copy
                     UnifiedLog($"File {fullPath} is busy/locked, creating temporary copy...", "INFO");
 
                     string tempFile = CreateTemporaryCopy(fullPath);
@@ -742,6 +814,7 @@ EXAMPLES:
 
         private string CreateTemporaryCopy(string originalPath)
         {
+            // Create temporary copy of locked file
             try
             {
                 string tempDir = Path.GetTempPath();
@@ -760,6 +833,7 @@ EXAMPLES:
 
         private void ScheduleTempFileDeletion(string tempFile)
         {
+            // Schedule temporary file deletion after email send
             try
             {
                 Task.Run(async () =>
@@ -776,6 +850,7 @@ EXAMPLES:
 
         private void TryDeleteFile(string filePath)
         {
+            // Safely delete temporary file
             try
             {
                 if (File.Exists(filePath))
@@ -792,6 +867,7 @@ EXAMPLES:
 
         private void ApplyCommandLineOverrides(EmailSettings settings)
         {
+            // Override INI settings with command line parameters
             if (!string.IsNullOrEmpty(_cmdServer))
                 settings.SmtpServer = _cmdServer;
 
@@ -816,6 +892,7 @@ EXAMPLES:
 
         private void ShowWarning(string message)
         {
+            // Display warning message in console
             try
             {
                 ShowConsole();
@@ -828,6 +905,7 @@ EXAMPLES:
 
         private void ShowNotification(string message)
         {
+            // Display notification message in console
             try
             {
                 ShowConsole();
@@ -840,6 +918,7 @@ EXAMPLES:
 
         private bool IsAuthenticationError(SmtpException ex)
         {
+            // Check if exception is authentication-related
             return ex.Message.Contains("authentication") ||
                    ex.Message.Contains("password") ||
                    ex.Message.Contains("credential") ||
@@ -849,6 +928,7 @@ EXAMPLES:
 
         private bool RevertToUnencryptedPassword(string password)
         {
+            // Revert encrypted password to plain text in INI file
             try
             {
                 var lines = File.ReadAllLines(_iniPath);
@@ -905,6 +985,7 @@ EXAMPLES:
 
         private bool EncryptPasswordInIniFile(string password)
         {
+            // Encrypt password and update INI file
             try
             {
                 var lines = File.ReadAllLines(_iniPath);
@@ -963,6 +1044,7 @@ EXAMPLES:
 
         private string ProcessTemplateVariables(string text)
         {
+            // Replace template variables with actual values
             return text
                 .Replace("{host}", Environment.MachineName)
                 .Replace("{user}", Environment.UserName)
@@ -973,11 +1055,13 @@ EXAMPLES:
 
         private string GetDefaultBody()
         {
+            // Default email body template
             return $"Notification from Your Emailer\nHost: {Environment.MachineName}\nUser: {Environment.UserName}\nTime: {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
         }
 
         private EmailSettings ReadSettings()
         {
+            // Read settings from INI file or command line
             try
             {
                 string appDir = AppDomain.CurrentDomain.BaseDirectory;
@@ -1072,6 +1156,7 @@ EXAMPLES:
 
         private bool HasRequiredCommandLineParameters()
         {
+            // Check if all required SMTP parameters are provided via command line
             return !string.IsNullOrEmpty(_cmdServer) &&
                    !string.IsNullOrEmpty(_cmdPort) &&
                    !string.IsNullOrEmpty(_cmdUsername) &&
@@ -1082,6 +1167,7 @@ EXAMPLES:
 
         private EmailSettings CreateSettingsFromCommandLine()
         {
+            // Create settings from command line parameters only
             var settings = new EmailSettings();
 
             settings.SmtpServer = _cmdServer;
@@ -1100,12 +1186,14 @@ EXAMPLES:
 
         private string EncryptPassword(string password)
         {
+            // Simple Base64 password encryption (basic obfuscation)
             byte[] data = Encoding.UTF8.GetBytes(password);
             return Convert.ToBase64String(data);
         }
 
         private string DecryptPassword(string encryptedPassword)
         {
+            // Decrypt Base64 encoded password
             try
             {
                 byte[] data = Convert.FromBase64String(encryptedPassword);
@@ -1119,6 +1207,7 @@ EXAMPLES:
 
         private void CreateDefaultIniFile()
         {
+            // Create default INI configuration file
             try
             {
                 var defaultContent = @"
@@ -1145,6 +1234,7 @@ EnableSSL = True
 
         private void HandleException(string context, Exception ex)
         {
+            // Unified exception handling with detailed logging
             if (!context.StartsWith("ERROR"))
             {
                 UnifiedLog(context, "ERROR");
@@ -1166,6 +1256,7 @@ EnableSSL = True
                 UnifiedLog($"SMTP STATUS CODE: {smtpEx.StatusCode}", "DEBUG");
             }
 
+            // Show detailed exception info in debug mode
             if (_debug)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
@@ -1185,6 +1276,7 @@ EnableSSL = True
 
         private void WriteToLogFile(string message)
         {
+            // Write message to log file with file lock checking
             if (_inFileLockNotification)
                 return;
 
@@ -1208,6 +1300,7 @@ EnableSSL = True
 
     public class EmailSettings
     {
+        // Configuration settings storage class
         public string Username { get; set; } = "";
         public string Password { get; set; } = "";
         public bool PasswordIsEncrypted { get; set; } = false;
