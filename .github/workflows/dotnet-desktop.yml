@@ -39,7 +39,6 @@ jobs:
       
     - name: Publish Windows app (Single File)
       run: |
-        # Публикуем как единый файл для Windows БЕЗ временных папок
         dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=false -p:IncludeNativeLibrariesForSelfExtract=false --output ./publish-windows
       
     - name: Copy config files to publish directory
@@ -67,11 +66,9 @@ jobs:
       run: |
         $publishDir = "./publish-windows"
         if (Test-Path $publishDir) {
-          # Create emailer folder and copy files
           New-Item -ItemType Directory -Path "./emailer" -Force
           Copy-Item -Path "$publishDir/*" -Destination "./emailer/" -Recurse
           
-          # Create ZIP with emailer folder inside
           $tagName = "${{ github.ref_name }}"
           if ($tagName -eq "") { $tagName = "latest" }
           Compress-Archive -Path "./emailer/" -DestinationPath "emailer-windows-$tagName.zip" -Force
@@ -130,7 +127,6 @@ jobs:
         
     - name: Publish for Linux (Single File)
       run: |
-        # Публикуем как единый файл для Linux БЕЗ временных папок
         dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=false -p:IncludeNativeLibrariesForSelfExtract=false --output ./publish-linux
         
     - name: Copy config files to publish directory
@@ -146,21 +142,17 @@ jobs:
         
     - name: Create RPM package using fpm
       run: |
-        # Create package structure
         mkdir -p /tmp/emailer-pkg/usr/bin
         mkdir -p /tmp/emailer-pkg/usr/share/emailer
         
-        # Copy application files
         cp -r publish-linux/* /tmp/emailer-pkg/usr/share/emailer/
         
-        # Create launcher script
         cat > /tmp/emailer-pkg/usr/bin/emailer << 'EOF'
         #!/bin/bash
         exec /usr/share/emailer/emailer "$@"
         EOF
         chmod +x /tmp/emailer-pkg/usr/bin/emailer
         
-        # Create RPM package
         fpm -s dir -t rpm \
           -n emailer \
           -v 1.0.0 \
@@ -194,7 +186,6 @@ jobs:
         
     - name: Publish for Linux (Single File)
       run: |
-        # Публикуем как единый файл для Linux БЕЗ временных папок
         dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=false -p:IncludeNativeLibrariesForSelfExtract=false --output ./publish-linux
         
     - name: Copy config files to publish directory
@@ -219,10 +210,8 @@ jobs:
         mkdir -p deb-package/usr/local/bin/emailer
         mkdir -p deb-package/DEBIAN
         
-        # Copy published files (including INI and readme)
         cp -r publish-linux/* deb-package/usr/local/bin/emailer/
         
-        # Create control file for DEB package
         cat > deb-package/DEBIAN/control << EOF
         Package: emailer
         Version: 1.0.0-${{ github.run_number }}
@@ -235,7 +224,6 @@ jobs:
          Features include SSL/TLS support, file attachments, and comprehensive logging.
         EOF
         
-        # Create launcher script
         mkdir -p deb-package/usr/bin
         cat > deb-package/usr/bin/emailer << EOF
         #!/bin/bash
@@ -273,7 +261,6 @@ jobs:
         
     - name: Publish for Linux (Single File)
       run: |
-        # Публикуем как единый файл для Linux БЕЗ временных папок
         dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=false -p:IncludeNativeLibrariesForSelfExtract=false --output ./publish-linux
         
     - name: Copy config files to publish directory
@@ -283,14 +270,11 @@ jobs:
         
     - name: Create Linux ZIP package with emailer folder
       run: |
-        # Create emailer folder and copy files
         mkdir -p emailer
         cp -r publish-linux/* emailer/
         
-        # Create ZIP with emailer folder inside
         zip -r emailer-linux-${{ github.ref_name }}.zip emailer/
         
-        # Cleanup temp folder
         rm -rf emailer
         echo "Linux ZIP package with emailer folder created"
         
@@ -317,7 +301,6 @@ jobs:
         
     - name: Publish for macOS (Single File)
       run: |
-        # Публикуем как единый файл для macOS БЕЗ временных папок
         dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime osx-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeAllContentForSelfExtract=false -p:IncludeNativeLibrariesForSelfExtract=false --output ./publish-macos
         
     - name: Copy config files to publish directory
@@ -332,14 +315,11 @@ jobs:
         
     - name: Create macOS ZIP package with emailer folder
       run: |
-        # Create emailer folder and copy files
         mkdir -p emailer
         cp -r publish-macos/* emailer/
         
-        # Create ZIP with emailer folder inside
         zip -r emailer-macos-${{ github.ref_name }}.zip emailer/
         
-        # Cleanup temp folder
         rm -rf emailer
         echo "macOS ZIP package with emailer folder created"
         
