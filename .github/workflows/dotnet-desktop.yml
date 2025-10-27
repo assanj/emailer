@@ -1,34 +1,542 @@
-## .NET
-obj/
-bin/
-*.pdb
-*.db
+name: .NET Desktop Build and Test
 
-## Visual Studio
-.vs/
-*.user
-*.suo
-*.userosscache
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, master ]
 
-## Build results
-[Dd]ebug/
-[Dd]ebugPublic/
-[Rr]elease/
-[Rr]eleases/
-x64/
-x86/
-bld/
-[Bb]in/
-[Oo]bj/
-[Ll]og/
+env:
+  DOTNET_VERSION: '8.0.x'
+  CONFIGURATION: 'Release'
 
-## Visual Studio cache/options directory
-.vs/
+permissions:
+  contents: write
 
-## OS
-.DS_Store
-Thumbs.db
+jobs:
+  build:
+    name: Build and Test
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install Costura.Fody
+      run: dotnet add package Costura.Fody --version 5.8.0
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --configuration ${{ env.CONFIGURATION }} --no-restore
+      
+    - name: Test
+      run: dotnet test --configuration ${{ env.CONFIGURATION }} --no-build --verbosity normal
+      
+    - name: Publish Windows app (Single File)
+      run: |
+        # Публикуем как единый файл для Windows с Costura
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime win-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-windows
+      
+    - name: Verify files included
+      run: |
+        echo "Checking files in publish directory:"
+        Get-ChildItem ./publish-windows -Recurse
+        if (-not (Test-Path "./publish-windows/emailer.exe")) {
+          echo "ERROR: emailer.exe not found!"
+          exit 1
+        }
+        if (-not (Test-Path "./publish-windows/emailer.ini")) {
+          echo "WARNING: emailer.ini not found in publish directory"
+        }
+        if (-not (Test-Path "./publish-windows/readme.txt")) {
+          echo "WARNING: readme.txt not found in publish directory"
+        }
+        echo "All files verified successfully"
+        
+    - name: Create ZIP archive with emailer folder
+      run: |
+        $publishDir = "./publish-windows"
+        if (Test-Path $publishDir) {
+          # Create emailer folder and copy files
+          New-Item -ItemType Directory -Path "./emailer" -Force
+          Copy-Item -Path "$publishDir/*" -Destination "./emailer/" -Recurse
+          
+          # Create ZIP with emailer folder inside
+          $tagName = "${{ github.ref_name }}"
+          if ($tagName -eq "") { $tagName = "latest" }
+          Compress-Archive -Path "./emailer/" -DestinationPath "emailer-windows-$tagName.zip" -Force
+          Remove-Item -Path "./emailer" -Recurse -Force
+          echo "ZIP archive with emailer folder created successfully"
+        } else {
+          echo "Publish directory not found"
+          exit 1
+        }
+        
+    - name: Upload ZIP artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: emailer-zip
+        path: emailer-windows-*.zip
+        retention-days: 30
+        
+  cross-platform-build:
+    name: Cross-Platform Build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install Costura.Fody
+      run: dotnet add package Costura.Fody --version 5.8.0
+        
+    - name: Build
+      run: dotnet build --configuration ${{ env.CONFIGURATION }}
+      
+    - name: Basic Functionality Test
+      shell: bash
+      run: |
+        echo "Running basic functionality tests on $RUNNER_OS"
+        dotnet test --verbosity normal
 
-## IDE
-.idea/
-.vscode/
+  linux-rpm-package:
+    name: Create RPM Package
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install Costura.Fody
+      run: dotnet add package Costura.Fody --version 5.8.0
+        
+    - name: Build
+      run: dotnet build --configuration ${{ env.CONFIGURATION }}
+        
+    - name: Publish for Linux (Single File)
+      run: |
+        # Публикуем как единый файл для Linux
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-linux
+        
+    - name: Install fpm for easy package creation
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ruby ruby-dev rpm build-essential
+        sudo gem install fpm
+        
+    - name: Create RPM package using fpm
+      run: |
+        # Create package structure
+        mkdir -p /tmp/emailer-pkg/usr/bin
+        mkdir -p /tmp/emailer-pkg/usr/share/emailer
+        
+        # Copy application files
+        cp -r publish-linux/* /tmp/emailer-pkg/usr/share/emailer/
+        
+        # Create launcher script
+        cat > /tmp/emailer-pkg/usr/bin/emailer << 'EOF'
+        #!/bin/bash
+        exec /usr/share/emailer/emailer "$@"
+        EOF
+        chmod +x /tmp/emailer-pkg/usr/bin/emailer
+        
+        # Create RPM package
+        fpm -s dir -t rpm \
+          -n emailer \
+          -v 1.0.0 \
+          --iteration ${{ github.run_number }} \
+          -C /tmp/emailer-pkg \
+          --description "SMTP Email Sending Utility" \
+          --url "https://github.com/assanj/emailer" \
+          --maintainer "Your Name <your-email@example.com>" \
+          usr/
+        
+    - name: Upload RPM artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: emailer-rpm-package
+        path: emailer-*.rpm
+        retention-days: 30
+        
+  linux-deb-package:
+    name: Create DEB Package
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install Costura.Fody
+      run: dotnet add package Costura.Fody --version 5.8.0
+        
+    - name: Build
+      run: dotnet build --configuration ${{ env.CONFIGURATION }}
+        
+    - name: Publish for Linux (Single File)
+      run: |
+        # Публикуем как единый файл для Linux
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-linux
+        
+    - name: Verify files for Linux
+      run: |
+        echo "Checking files for Linux build:"
+        find ./publish-linux -name "*"
+        echo "Files in publish directory:"
+        ls -la ./publish-linux/
+        
+    - name: Install dpkg tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y dpkg-dev debhelper
+        
+    - name: Create DEB package structure
+      run: |
+        mkdir -p deb-package/usr/local/bin/emailer
+        mkdir -p deb-package/DEBIAN
+        
+        # Copy published files (including INI and readme)
+        cp -r publish-linux/* deb-package/usr/local/bin/emailer/
+        
+        # Create control file for DEB package
+        cat > deb-package/DEBIAN/control << EOF
+        Package: emailer
+        Version: 1.0.0-${{ github.run_number }}
+        Section: utils
+        Priority: optional
+        Architecture: amd64
+        Maintainer: Your Name <your-email@example.com>
+        Description: SMTP Email Sending Utility
+         emailer is a cross-platform application for sending emails via SMTP.
+         Features include SSL/TLS support, file attachments, and comprehensive logging.
+        EOF
+        
+        # Create launcher script
+        mkdir -p deb-package/usr/bin
+        cat > deb-package/usr/bin/emailer << EOF
+        #!/bin/bash
+        exec /usr/local/bin/emailer/emailer "\$@"
+        EOF
+        chmod +x deb-package/usr/bin/emailer
+        
+        echo "DEB package structure created"
+        
+    - name: Build DEB package
+      run: |
+        dpkg-deb --build deb-package emailer_1.0.0-${{ github.run_number }}_amd64.deb
+        echo "DEB package built successfully"
+        
+    - name: Upload DEB artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: emailer-deb-package
+        path: emailer_*.deb
+        retention-days: 30
+        
+  linux-portable:
+    name: Create Linux Portable
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install Costura.Fody
+      run: dotnet add package Costura.Fody --version 5.8.0
+        
+    - name: Build
+      run: dotnet build --configuration ${{ env.CONFIGURATION }}
+        
+    - name: Publish for Linux (Single File)
+      run: |
+        # Публикуем как единый файл для Linux
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime linux-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-linux
+        
+    - name: Create Linux ZIP package with emailer folder
+      run: |
+        # Create emailer folder and copy files
+        mkdir -p emailer
+        cp -r publish-linux/* emailer/
+        
+        # Create ZIP with emailer folder inside
+        zip -r emailer-linux-${{ github.ref_name }}.zip emailer/
+        
+        # Cleanup temp folder
+        rm -rf emailer
+        echo "Linux ZIP package with emailer folder created"
+        
+    - name: Upload Linux portable artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: emailer-linux-portable
+        path: emailer-linux-*.zip
+        retention-days: 30
+        
+  macos-packages:
+    name: Create macOS Packages
+    runs-on: macos-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Install Costura.Fody
+      run: dotnet add package Costura.Fody --version 5.8.0
+        
+    - name: Build
+      run: dotnet build --configuration ${{ env.CONFIGURATION }}
+        
+    - name: Publish for macOS (Single File)
+      run: |
+        # Публикуем как единый файл для macOS
+        dotnet publish --configuration ${{ env.CONFIGURATION }} --runtime osx-x64 --self-contained true -p:PublishSingleFile=true --output ./publish-macos
+        
+    - name: Verify files for macOS
+      run: |
+        echo "Checking files for macOS build:"
+        find ./publish-macos -name "*"
+        
+    - name: Create macOS ZIP package with emailer folder
+      run: |
+        # Create emailer folder and copy files
+        mkdir -p emailer
+        cp -r publish-macos/* emailer/
+        
+        # Create ZIP with emailer folder inside
+        zip -r emailer-macos-${{ github.ref_name }}.zip emailer/
+        
+        # Cleanup temp folder
+        rm -rf emailer
+        echo "macOS ZIP package with emailer folder created"
+        
+    - name: Upload macOS artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: emailer-macos-packages
+        path: emailer-macos-*.zip
+        retention-days: 30
+        
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build, cross-platform-build, linux-deb-package, linux-rpm-package, linux-portable, macos-packages]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Download all artifacts
+      run: |
+        mkdir -p release-artifacts
+        
+    - name: Download Windows ZIP
+      uses: actions/download-artifact@v4
+      with:
+        name: emailer-zip
+        path: ./release-artifacts
+        
+    - name: Download DEB package
+      uses: actions/download-artifact@v4
+      with:
+        name: emailer-deb-package
+        path: ./release-artifacts
+        
+    - name: Download RPM package
+      uses: actions/download-artifact@v4
+      with:
+        name: emailer-rpm-package
+        path: ./release-artifacts
+        
+    - name: Download Linux portable
+      uses: actions/download-artifact@v4
+      with:
+        name: emailer-linux-portable
+        path: ./release-artifacts
+        
+    - name: Download macOS packages
+      uses: actions/download-artifact@v4
+      with:
+        name: emailer-macos-packages
+        path: ./release-artifacts
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Build Release version
+      run: dotnet build --configuration ${{ env.CONFIGURATION }}
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: emailer ${{ github.ref_name }}
+        body: |
+          emailer - SMTP Email Sending Utility
+          
+          Features:
+          - SMTP email sending with SSL/TLS
+          - Cross-platform support (Windows/Linux/macOS)
+          - File attachment support
+          - Password encryption
+          - Comprehensive logging
+          - Configuration via config.ini file
+          - **Single executable for all platforms**
+          
+          **Downloads:**
+          
+          ### Windows
+          - [emailer-windows-${{ github.ref_name }}.zip](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-windows-${{ github.ref_name }}.zip) - **Single executable** with config files (x64)
+          
+          ### Linux
+          - [emailer_1.0.0-${{ github.run_number }}_amd64.deb](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer_1.0.0-${{ github.run_number }}_amd64.deb) - DEB package (Ubuntu/Debian, amd64)
+          - [emailer-1.0.0-${{ github.run_number }}.x86_64.rpm](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-1.0.0-${{ github.run_number }}.x86_64.rpm) - RPM package (Fedora/RHEL/CentOS, x86_64)
+          - [emailer-linux-${{ github.ref_name }}.zip](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-linux-${{ github.ref_name }}.zip) - **Single executable** with config files (x64)
+          
+          ### macOS
+          - [emailer-macos-${{ github.ref_name }}.zip](https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-macos-${{ github.ref_name }}.zip) - **Single executable** with config files (x64)
+          
+          **Configuration:**
+          After installation, edit `config.ini` file to configure SMTP settings and defaults.
+          
+          The application will look for `config.ini` in the following locations:
+          - Current directory
+          - Application directory
+          - User home directory
+          
+          **Usage:**
+          ```bash
+          emailer --help
+          emailer --config /path/to/config.ini
+          emailer --to recipient@example.com --subject "Test" --body "Hello World"
+          ```
+          
+          **Installation Instructions:**
+          
+          **Windows:**
+          ```powershell
+          # Download and extract
+          Invoke-WebRequest -Uri "https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-windows-${{ github.ref_name }}.zip" -OutFile "emailer-windows-${{ github.ref_name }}.zip"
+          Expand-Archive -Path "emailer-windows-${{ github.ref_name }}.zip" -DestinationPath "."
+          cd emailer
+          .\emailer.exe
+          ```
+          
+          **macOS:**
+          ```bash
+          # Download and extract
+          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-macos-${{ github.ref_name }}.zip
+          unzip emailer-macos-${{ github.ref_name }}.zip
+          cd emailer
+          ./emailer
+          ```
+          
+          **Linux Installation:**
+          
+          **Ubuntu/Debian:**
+          ```bash
+          # Download and install DEB package
+          wget https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer_1.0.0-${{ github.run_number }}_amd64.deb
+          sudo dpkg -i emailer_1.0.0-${{ github.run_number }}_amd64.deb
+          
+          # Or using curl
+          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer_1.0.0-${{ github.run_number }}_amd64.deb
+          sudo dpkg -i emailer_1.0.0-${{ github.run_number }}_amd64.deb
+          ```
+          
+          **Fedora/RHEL/CentOS:**
+          ```bash
+          # Download and install RPM package
+          wget https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
+          sudo rpm -i emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
+          
+          # Or using curl
+          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
+          sudo rpm -i emailer-1.0.0-${{ github.run_number }}.x86_64.rpm
+          ```
+          
+          **Portable Linux (any distribution):**
+          ```bash
+          # Download and extract portable version
+          wget https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-linux-${{ github.ref_name }}.zip
+          unzip emailer-linux-${{ github.ref_name }}.zip
+          cd emailer
+          ./emailer
+          
+          # Or using curl
+          curl -L -O https://github.com/assanj/emailer/releases/download/${{ github.ref_name }}/emailer-linux-${{ github.ref_name }}.zip
+          unzip emailer-linux-${{ github.ref_name }}.zip
+          cd emailer
+          ./emailer
+          ```
+          
+          **One-liner installation (Linux DEB):**
+          ```bash
+          # Download and install in one command (requires root)
+          wget -q https://github.com/assanj/emailer/releases/latest/download/emailer_*_amd64.deb -O emailer.deb && sudo dpkg -i emailer.deb
+          ```
+          
+          **One-liner installation (Linux RPM):**
+          ```bash
+          # Download and install in one command (requires root)
+          wget -q https://github.com/assanj/emailer/releases/latest/download/emailer-*.x86_64.rpm -O emailer.rpm && sudo rpm -i emailer.rpm
+          ```
+          
+          **One-liner portable (Linux):**
+          ```bash
+          # Download, extract and run in one command
+          wget -q https://github.com/assanj/emailer/releases/latest/download/emailer-linux-*.zip -O emailer.zip && unzip -q emailer.zip && cd emailer && ./emailer
+          ```
+          
+          See README.md for full documentation and examples.
+        files: |
+          ./release-artifacts/emailer-windows-*.zip
+          ./release-artifacts/emailer_*.deb
+          ./release-artifacts/emailer-*.rpm
+          ./release-artifacts/emailer-linux-*.zip
+          ./release-artifacts/emailer-macos-*.zip
+        draft: false
+        prerelease: false
